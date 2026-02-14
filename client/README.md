@@ -9,13 +9,21 @@
 
 ### How to start it up (on Ubuntu):
 1. Clone the repo
-``git clone git@github.com:M-M-duo/PRIYOMysh.git``
-2. Reach the clinet repo:
-``cd client``
-3. Give permission for runner file:
-```chmod +x run.sh```
-5. Start run file
-```./run.sh```
+```bash
+git clone git@github.com:M-M-duo/PRIYOMysh.git
+```
+3. Reach the clinet repo:
+```bash
+cd client
+```
+5. Give permission for runner file:
+```bash
+chmod +x run.sh
+```
+7. Start run file
+```bash
+./run.sh
+```
 
 
 
