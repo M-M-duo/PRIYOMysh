@@ -1,9 +1,9 @@
-###Client ver 0.0.1
+### Client ver 0.0.1
 
-#### available functions
-- auto-ping server
-- manual server request
-- monitoring server's  json responses
+#### Available functions
+- Auto-ping server
+- Manual server request
+- Monitoring server's  json responses
 
 
 
