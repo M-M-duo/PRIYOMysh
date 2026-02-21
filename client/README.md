@@ -4,6 +4,7 @@
 - Auto-ping server
 - Manual server request
 - Monitoring server's  json responses
+- beta: login/register dialog-window
 
 
 
