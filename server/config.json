@@ -8,21 +8,6 @@
     ],
     "app": {
         "number_of_threads": 4,
-        "log": {
-            "log_path": "./logs",
-            "logfile_base_name": "drogon"
-        }
-    },
-    "db_clients": [
-        {
-            "name": "postgres",
-            "rdbms": "postgresql",
-            "host": "${POSTGRES_HOST}",
-            "port": 5432,
-            "dbname": "${POSTGRES_DATABASE}",
-            "username": "${POSTGRES_USERNAME}",
-            "password": "${POSTGRES_PASSWORD}",
-            "connectionNumber": 10
-        }
-    ]
+        "log_sql": true
+    }
 }
