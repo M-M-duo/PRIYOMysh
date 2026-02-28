@@ -1,9 +1,11 @@
 #pragma once
-
 #include <drogon/drogon.h>
 #include <drogon/orm/Exception.h>
 #include <crypt.h>
 #include <string>
+#include <regex>
+#include <jwt-cpp/jwt.h>
+#include <ctime>
 
 using namespace drogon;
 
@@ -37,6 +39,31 @@ inline std::string hashPassword(const std::string& plain) {
         return "";
     }
     return std::string(result);
+}
+
+inline bool checkPassword(const std::string& plain, const std::string& hash) {
+    struct crypt_data data;
+    data.initialized = 0;
+    char* result = crypt_r(plain.c_str(), hash.c_str(), &data);
+    return result && hash == result;
+}
+
+inline std::string JWT_SECRET = []{
+    auto s = std::getenv("RANDOM_SECRET");
+    return s ? s : "default_secret";
+}();
+
+inline std::string createToken(const std::string& login, int token_number, int update_token) {
+    auto now = std::chrono::system_clock::now();
+    auto exp = now + std::chrono::hours(20);
+    auto token = jwt::create()
+        .set_type("JWT")
+        .set_payload_claim("login", jwt::claim(login))
+        .set_payload_claim("token_number", jwt::claim(std::to_string(token_number)))
+        .set_payload_claim("update_token", jwt::claim(std::to_string(update_token)))
+        .set_expires_at(exp)
+        .sign(jwt::algorithm::hs256{JWT_SECRET});
+    return token;
 }
 
 inline bool validateLogin(const std::string& login) {

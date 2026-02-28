@@ -31,7 +31,7 @@ void setupDatabase() {
 
 int main() {
 
-    drogon::app().loadConfigFile("config.json");
+    drogon::app().loadConfigFile("../config.json");
     LOG_INFO << "Config loaded";
 
     auto db = getDbClient();

@@ -6,10 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/jwt-cpp/include)
 
 find_package(Drogon REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(PostgreSQL REQUIRED)  
+find_package(PostgreSQL REQUIRED)
 
 find_path(LIBXCRYPT_INCLUDE_DIR
     NAMES crypt.h
