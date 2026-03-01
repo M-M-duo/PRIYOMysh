@@ -266,18 +266,51 @@ void MainWindow::onRegisterClicked() {
 void MainWindow::showAuthDialog(const QString &mode) {
     AuthDialog dialog(mode, this);
     if (dialog.exec() == QDialog::Accepted) {
+        QString nickname = dialog.getNickname();
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
-        if (login.isEmpty() || password.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Empty login/password");
+        if (login.isEmpty() || password.isEmpty() || nichname.isEmpty()) {
+            QMessageBox::warning(this, "Error", "Empty nickname/login/password");
             return;
         }
-        sendAuthRequest(login, password, mode);
-    }
+        if (mode == "login"){
+            sendSignInRequest(login, password, mode);
+        }else{
+        sendAuthRequest(nickname, login, password, mode);
+    }}
 }
 
-void MainWindow::sendAuthRequest(const QString &login, const QString &password, const QString &mode) {
-    QUrl url(QString("http://192.0.0.1:8000/api/%1").arg(mode));
+void MainWindow::sendAuthRequest(const QString &login, const QString &password, const QString &mode, const QString &nickname) {
+    QUrl url(QString("http://192.0.0.1:8000/api/auth/register").arg(mode));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
+    request.setTransferTimeout(5000);
+
+    QJsonObject json;
+    json["login"] = login;
+    json["password"] = password;
+    json["nickname"] = nickname;
+    json["email"] = "";
+    json["isPublic"] = "";
+    json["phone"] = "";
+    json["image"] = "";
+
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson();
+
+    QNetworkReply *reply = networkManager->post(request, data);
+    reply->setProperty("auth_mode", mode);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        onAuthReplyFinished(reply);
+    });
+}
+
+
+
+void MainWindow::sendSignInRequest(const QString &login, const QString &password) {
+    QUrl url(QString("http://192.0.0.1:8000/api/auth/sign-in").arg(mode));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
@@ -294,11 +327,39 @@ void MainWindow::sendAuthRequest(const QString &login, const QString &password, 
     reply->setProperty("auth_mode", mode);
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        onAuthReplyFinished(reply);
+        onSignInReplyFinished(reply);
     });
 }
 
+
+
+
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
+    QString mode = reply->property("auth_mode").toString();
+    QString title = (mode == "login") ? "auth/sign-in" : "auth/register";
+    QString message;
+    QMessageBox::Icon icon;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray response = reply->readAll();
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
+        if (!jsonDoc.isNull() && jsonDoc.object().contains("message")) {
+            message = jsonDoc.object()["message"].toString();
+        } else {
+            message = "succesful response";
+        }
+        icon = QMessageBox::Information;
+    } else {
+        message = "Error: " + reply->errorString();
+        icon = QMessageBox::Critical;
+    }
+
+    QMessageBox::information(this, title, message);
+    reply->deleteLater();
+}
+
+
+void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
     QString mode = reply->property("auth_mode").toString();
     QString title = (mode == "login") ? "auth/sign-in" : "auth/register";
     QString message;
