@@ -8,13 +8,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 
 add_executable(ping_monitor
     main.cpp
     mainwindow.cpp
-    mainwindow.h 
+    authdialog.cpp
+    mainwindow.h
+    authdialog.h
+    resources.qrc  
 )
 
 target_link_libraries(ping_monitor

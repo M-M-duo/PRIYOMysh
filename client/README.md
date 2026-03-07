@@ -12,17 +12,17 @@
 ```bash
 git clone git@github.com:M-M-duo/PRIYOMysh.git
 ```
-3. Reach the clinet repo:
+2. Reach the clinet repo:
 ```bash
 cd client
 ```
-5. Give permission for runner file:
-```bash
-chmod +x run.sh
+3. Start setup for dependencies
 ```
-7. Start run file
+chmod +x install_deps.sh && ./install_deps.sh
+```
+4. Give permission for run-file and start it:
 ```bash
-./run.sh
+chmod +x run.sh && ./run.sh
 ```
 
 
