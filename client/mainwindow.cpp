@@ -4,13 +4,16 @@
 #include <QUrl>
 #include <QJsonParseError>
 #include <QMessageBox>
-#include <QScrollBar>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QLabel>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QDateTime>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent) {
+    : QMainWindow(parent), authToken("")
+{
     networkManager = new QNetworkAccessManager(this);
     timer = new QTimer(this);
 
@@ -20,8 +23,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(networkManager, &QNetworkAccessManager::finished,
             this, &MainWindow::onReplyFinished);
 
-    timer->start(5000); 
-    checkConnection();  
+    timer->start(5000);
+    checkConnection();
 
     setWindowTitle("Ping Monitor - localhost:3000");
     resize(800, 600);
@@ -56,7 +59,7 @@ void MainWindow::setupUI() {
             background-color: #0056b3;
         }
     )");
-    connect(loginButton, &QPushButton::clicked, this, &MainWindow::onLoginClicked);
+    connect(loginButton, &QPushButton::clicked, this, &MainWindow::onSignInClicked);
 
     registerButton = new QPushButton("Register", this);
     registerButton->setStyleSheet(R"(
@@ -136,7 +139,7 @@ void MainWindow::setupUI() {
             padding: 10px;
         }
     )");
-    mainLayout->addWidget(responseText, 1); 
+    mainLayout->addWidget(responseText, 1);
 
     QLabel *timeLabel = new QLabel("auto check", this);
     timeLabel->setStyleSheet("color: #6c757d; font-size: 12px; padding: 5px;");
@@ -147,8 +150,12 @@ void MainWindow::setupUI() {
 }
 
 void MainWindow::checkConnection() {
-    QUrl url("http://localhost:3000");
+    QUrl url("http://127.0.0.1:12345");
     QNetworkRequest request(url);
+
+    if (!authToken.isEmpty()) {
+        request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+    }
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Ping Monitor");
@@ -158,7 +165,7 @@ void MainWindow::checkConnection() {
     networkManager->get(request);
 
     updateStatus("localhost:3000 Checking...", "#fff3cd");
-    responseText->setText("Ожидание ответа от сервера...");
+    responseText->setText("Waiting for server response...");
 }
 
 void MainWindow::onReplyFinished(QNetworkReply *reply) {
@@ -175,7 +182,7 @@ void MainWindow::onReplyFinished(QNetworkReply *reply) {
             updateStatus("Connection success  (" + timestamp + ")", "#d4edda");
             responseText->setText(formattedJson);
         } else {
-            updateStatus("Connection success  (" + timestamp + ", не JSON)", "#d4edda");
+            updateStatus("Connection success  (" + timestamp + ", not JSON)", "#d4edda");
             responseText->setText("Server response:\n" + QString(response));
         }
     } else {
@@ -254,9 +261,8 @@ void MainWindow::updateStatus(const QString &message, const QString &color) {
     statusLabel->setStyleSheet(style);
 }
 
-
-void MainWindow::onLoginClicked() {
-    showAuthDialog("login");
+void MainWindow::onSignInClicked() {
+    showSignInDialog("login");
 }
 
 void MainWindow::onRegisterClicked() {
@@ -269,19 +275,29 @@ void MainWindow::showAuthDialog(const QString &mode) {
         QString nickname = dialog.getNickname();
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
-        if (login.isEmpty() || password.isEmpty() || nichname.isEmpty()) {
+        if (login.isEmpty() || password.isEmpty() || nickname.isEmpty()) {
             QMessageBox::warning(this, "Error", "Empty nickname/login/password");
             return;
         }
-        if (mode == "login"){
-            sendSignInRequest(login, password, mode);
-        }else{
         sendAuthRequest(nickname, login, password, mode);
-    }}
+    }
 }
 
-void MainWindow::sendAuthRequest(const QString &login, const QString &password, const QString &mode, const QString &nickname) {
-    QUrl url(QString("http://192.0.0.1:8000/api/auth/register").arg(mode));
+void MainWindow::showSignInDialog(const QString &mode) {
+    AuthDialog dialog(mode, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString login = dialog.getLogin();
+        QString password = dialog.getPassword();
+        if (login.isEmpty() || password.isEmpty()) {
+            QMessageBox::warning(this, "Error", "Empty login/password");
+            return;
+        }
+        sendSignInRequest(login, password);
+    }
+}
+
+void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, const QString &password, const QString &mode) {
+    QUrl url(QString("http://127.0.0.1:12345/api/auth/%1").arg(mode));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
@@ -307,10 +323,8 @@ void MainWindow::sendAuthRequest(const QString &login, const QString &password, 
     });
 }
 
-
-
 void MainWindow::sendSignInRequest(const QString &login, const QString &password) {
-    QUrl url(QString("http://192.0.0.1:8000/api/auth/sign-in").arg(mode));
+    QUrl url("http://127.0.0.1:12345/api/auth/sign-in");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
@@ -324,29 +338,34 @@ void MainWindow::sendSignInRequest(const QString &login, const QString &password
     QByteArray data = doc.toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
-    reply->setProperty("auth_mode", mode);
+    reply->setProperty("auth_mode", "login");
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         onSignInReplyFinished(reply);
     });
 }
 
-
-
-
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
     QString mode = reply->property("auth_mode").toString();
-    QString title = (mode == "login") ? "auth/sign-in" : "auth/register";
+    QString title = (mode == "register") ? "Registration" : "Unknown";
     QString message;
     QMessageBox::Icon icon;
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
         QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
-        if (!jsonDoc.isNull() && jsonDoc.object().contains("message")) {
-            message = jsonDoc.object()["message"].toString();
+        if (!jsonDoc.isNull()) {
+            QJsonObject obj = jsonDoc.object();
+            if (obj.contains("message")) {
+                message = obj["message"].toString();
+            } else {
+                message = "Successful response";
+            }
+            if (obj.contains("token")) {
+                authToken = obj["token"].toString();
+            }
         } else {
-            message = "succesful response";
+            message = "Successful response";
         }
         icon = QMessageBox::Information;
     } else {
@@ -358,20 +377,26 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
     reply->deleteLater();
 }
 
-
 void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
-    QString mode = reply->property("auth_mode").toString();
-    QString title = (mode == "login") ? "auth/sign-in" : "auth/register";
+    QString title = "Sign In";
     QString message;
     QMessageBox::Icon icon;
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
         QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
-        if (!jsonDoc.isNull() && jsonDoc.object().contains("message")) {
-            message = jsonDoc.object()["message"].toString();
+        if (!jsonDoc.isNull()) {
+            QJsonObject obj = jsonDoc.object();
+            if (obj.contains("message")) {
+                message = obj["message"].toString();
+            } else {
+                message = "Successful response";
+            }
+            if (obj.contains("token")) {
+                authToken = obj["token"].toString();
+            }
         } else {
-            message = "succesful response";
+            message = "Successful response";
         }
         icon = QMessageBox::Information;
     } else {

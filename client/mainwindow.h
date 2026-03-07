@@ -5,11 +5,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QTimer>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QLabel>
-#include <QVBoxLayout>
-#include <QWidget>
 #include <QPushButton>
 #include <QTextEdit>
 #include <QDateTime>
@@ -25,9 +21,10 @@ private slots:
     void checkConnection();
     void onReplyFinished(QNetworkReply *reply);
     void toggleAutoCheck();
-    void onLoginClicked();
+    void onSignInClicked();
     void onRegisterClicked();
     void onAuthReplyFinished(QNetworkReply *reply);
+    void onSignInReplyFinished(QNetworkReply *reply);
 
 private:
     QNetworkAccessManager *networkManager;
@@ -40,10 +37,14 @@ private:
     QPushButton *loginButton;
     QPushButton *registerButton;
 
+    QString authToken;
+
     void setupUI();
     void updateStatus(const QString &message, const QString &color);
     void showAuthDialog(const QString &mode);
-    void sendAuthRequest(const QString &login, const QString &password, const QString &mode);
+    void showSignInDialog(const QString &mode);
+    void sendAuthRequest(const QString &nickname, const QString &login, const QString &password, const QString &mode);
+    void sendSignInRequest(const QString &login, const QString &password);
 };
 
 #endif // MAINWINDOW_H
