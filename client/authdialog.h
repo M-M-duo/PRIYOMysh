@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QLineEdit>
+#include <QCheckBox>
 
 class AuthDialog : public QDialog {
     Q_OBJECT
@@ -11,11 +12,17 @@ public:
     QString getNickname() const;
     QString getLogin() const;
     QString getPassword() const;
+    QString getEmail() const;
+    QString getPhone() const;
+    bool isPublic() const;
 
 private:
     QLineEdit *nicknameEdit;
     QLineEdit *loginEdit;
     QLineEdit *passwordEdit;
+    QLineEdit *emailEdit;
+    QLineEdit *phoneEdit;
+    QCheckBox *isPublicCheckBox;
 };
 
 #endif // AUTHDIALOG_H

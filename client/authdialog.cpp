@@ -14,6 +14,17 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent)
         layout->addWidget(new QLabel("Nickname:"));
         nicknameEdit = new QLineEdit(this);
         layout->addWidget(nicknameEdit);
+
+        layout->addWidget(new QLabel("Email:"));
+        emailEdit = new QLineEdit(this);
+        layout->addWidget(emailEdit);
+
+        layout->addWidget(new QLabel("Phone:"));
+        phoneEdit = new QLineEdit(this);
+        layout->addWidget(phoneEdit);
+
+        isPublicCheckBox = new QCheckBox("Public profile", this);
+        layout->addWidget(isPublicCheckBox);
     }
 
     layout->addWidget(new QLabel("Login:"));
@@ -41,4 +52,16 @@ QString AuthDialog::getLogin() const {
 
 QString AuthDialog::getPassword() const {
     return passwordEdit->text();
+}
+
+QString AuthDialog::getEmail() const {
+    return emailEdit ? emailEdit->text() : QString();
+}
+
+QString AuthDialog::getPhone() const {
+    return phoneEdit ? phoneEdit->text() : QString();
+}
+
+bool AuthDialog::isPublic() const {
+    return isPublicCheckBox ? isPublicCheckBox->isChecked() : false;
 }

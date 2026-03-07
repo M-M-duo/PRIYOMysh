@@ -150,7 +150,7 @@ void MainWindow::setupUI() {
 }
 
 void MainWindow::checkConnection() {
-    QUrl url("http://127.0.0.1:12345");
+    QUrl url("http://127.0.0.1:8000");
     QNetworkRequest request(url);
 
     if (!authToken.isEmpty()) {
@@ -275,11 +275,23 @@ void MainWindow::showAuthDialog(const QString &mode) {
         QString nickname = dialog.getNickname();
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
-        if (login.isEmpty() || password.isEmpty() || nickname.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Empty nickname/login/password");
+        QString email = dialog.getEmail();
+        QString phone = dialog.getPhone();
+        bool isPublic = dialog.isPublic();
+
+        if (login.isEmpty() || password.isEmpty() || nickname.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+            QMessageBox msgBox;
+            // msgBox.setIconPixmap(QPixmap(":/source/warning_01.png"));
+            QPixmap original(":/sources/warning_01.png");
+            QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            msgBox.setIconPixmap(scaled);
+            msgBox.setWindowTitle("Pipipipipipipi");
+            msgBox.setText("You should fill all forms\n");
+            msgBox.setMinimumSize(400, 200);
+            msgBox.exec();
             return;
         }
-        sendAuthRequest(nickname, login, password, mode);
+        sendAuthRequest(nickname, login, password, email, phone, isPublic, mode);
     }
 }
 
@@ -289,15 +301,23 @@ void MainWindow::showSignInDialog(const QString &mode) {
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
         if (login.isEmpty() || password.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Empty login/password");
+            QMessageBox msgBox;
+            // msgBox.setIconPixmap(QPixmap(":/source/warning_01.png"));
+            QPixmap original(":/sources/warning_01.png");
+            QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            msgBox.setIconPixmap(scaled);
+            msgBox.setWindowTitle("Pipipipipipipi");
+            msgBox.setText("You should fill all forms\n");
+            msgBox.setMinimumSize(400, 200);
+            msgBox.exec();
             return;
         }
         sendSignInRequest(login, password);
     }
 }
 
-void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, const QString &password, const QString &mode) {
-    QUrl url(QString("http://127.0.0.1:12345/api/auth/%1").arg(mode));
+void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, const QString &password, const QString &email, const QString &phone, bool isPublic, const QString &mode) {
+    QUrl url(QString("http://127.0.0.1:8000/api/auth/%1").arg(mode));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
@@ -307,9 +327,9 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
     json["login"] = login;
     json["password"] = password;
     json["nickname"] = nickname;
-    json["email"] = "";
-    json["isPublic"] = "";
-    json["phone"] = "";
+    json["email"] = email;
+    json["phone"] = phone;
+    json["isPublic"] = isPublic;
     json["image"] = "";
 
     QJsonDocument doc(json);
@@ -324,7 +344,7 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
 }
 
 void MainWindow::sendSignInRequest(const QString &login, const QString &password) {
-    QUrl url("http://127.0.0.1:12345/api/auth/sign-in");
+    QUrl url("http://127.0.0.1:8000/api/auth/sign-in");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setHeader(QNetworkRequest::UserAgentHeader, "Qt6 Auth Client");
