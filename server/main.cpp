@@ -27,6 +27,35 @@ void setupDatabase() {
                      "update_token INTEGER DEFAULT 1)",
                      [](const drogon::orm::Result&) { LOG_INFO << "users table ready"; },
                      [](const drogon::orm::DrogonDbException& e) { LOG_ERROR << e.base().what(); });
+
+    db->execSqlAsync("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"",
+                    [](const drogon::orm::Result&) {
+                        LOG_INFO << "uuid-ossp extension ready";
+                    },
+                    [](const drogon::orm::DrogonDbException& e) {
+                        LOG_ERROR << e.base().what();
+                    });
+
+    db->execSqlAsync("CREATE TABLE IF NOT EXISTS posts ("
+                    "id SERIAL PRIMARY KEY, "
+                    "id_uuid UUID DEFAULT uuid_generate_v4(), "
+                    "content VARCHAR(1000) NOT NULL, "
+                    "author VARCHAR(30) NOT NULL, "
+                    "created_at TIMESTAMP WITHOUT TIME ZONE)",
+                    [](const drogon::orm::Result&) {
+                        LOG_INFO << "posts table ready";
+                    },
+                    [](const drogon::orm::DrogonDbException& e) {
+                        LOG_ERROR << e.base().what();
+                    });
+
+    db->execSqlAsync("CREATE TABLE IF NOT EXISTS tags ("
+                     "id SERIAL PRIMARY KEY, "
+                     "id_post INTEGER, "
+                     "tag VARCHAR(20) NOT NULL)",
+                     [](const drogon::orm::Result&) { LOG_INFO << "tags table ready"; },
+                     [](const drogon::orm::DrogonDbException& e) { LOG_ERROR << e.base().what(); });
+                     
 }
 
 int main() {
