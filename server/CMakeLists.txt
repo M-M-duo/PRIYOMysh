@@ -35,6 +35,7 @@ endif()
 add_executable(drogon_app
     main.cpp
     controllers/AuthController.cpp
+    controllers/PostsController.cpp
 )
 
 target_link_libraries(drogon_app PRIVATE
