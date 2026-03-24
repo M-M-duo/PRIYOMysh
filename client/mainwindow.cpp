@@ -326,7 +326,7 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
     QJsonObject json;
     json["login"] = login;
     json["password"] = password;
-    json["nickname"] = nickname;
+    // json["nickname"] = nickname;
     json["email"] = email;
     json["phone"] = phone;
     json["isPublic"] = isPublic;
