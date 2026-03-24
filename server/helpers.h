@@ -6,6 +6,7 @@
 #include <regex>
 #include <jwt-cpp/jwt.h>
 #include <ctime>
+#include <optional>
 
 using namespace drogon;
 
@@ -56,14 +57,43 @@ inline std::string JWT_SECRET = []{
 inline std::string createToken(const std::string& login, int token_number, int update_token) {
     auto now = std::chrono::system_clock::now();
     auto exp = now + std::chrono::hours(20);
+    auto exp_seconds = std::chrono::duration_cast<std::chrono::seconds>(exp.time_since_epoch()).count();
     auto token = jwt::create()
         .set_type("JWT")
         .set_payload_claim("login", jwt::claim(login))
+        .set_expires_at(exp)  
         .set_payload_claim("token_number", jwt::claim(std::to_string(token_number)))
         .set_payload_claim("update_token", jwt::claim(std::to_string(update_token)))
-        .set_expires_at(exp)
+        .set_issuer("") 
         .sign(jwt::algorithm::hs256{JWT_SECRET});
     return token;
+}
+
+struct TokenPayload {
+    std::string login;
+    long exp;
+    int token_number;
+    int update_token;
+};
+
+inline std::optional<TokenPayload> getTokenContent(const std::string& token) {
+    try {
+        auto decoded = jwt::decode(token);
+        auto verifier = jwt::verify()
+            .allow_algorithm(jwt::algorithm::hs256{JWT_SECRET})
+            .with_issuer("");
+        verifier.verify(decoded);
+
+        TokenPayload payload;
+        payload.login = decoded.get_payload_claim("login").as_string();
+        payload.exp = std::stoll(decoded.get_payload_claim("exp").as_string());
+        payload.token_number = std::stoi(decoded.get_payload_claim("token_number").as_string());
+        payload.update_token = std::stoi(decoded.get_payload_claim("update_token").as_string());
+        return payload;
+    } catch (const std::exception& e) {
+        LOG_ERROR << "JWT verification exception: " << e.what();
+        return std::nullopt;
+    }
 }
 
 inline bool validateLogin(const std::string& login) {
