@@ -14,9 +14,11 @@ add_executable(ping_monitor
     main.cpp
     mainwindow.cpp
     authdialog.cpp
+    postdialog.cpp
     mainwindow.h
     authdialog.h
-    resources.qrc  
+    postdialog.h
+    resources.qrc
 )
 
 target_link_libraries(ping_monitor
