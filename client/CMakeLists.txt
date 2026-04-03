@@ -15,9 +15,13 @@ add_executable(ping_monitor
     mainwindow.cpp
     authdialog.cpp
     postdialog.cpp
+    feedwindow.cpp
+    profiledialog.cpp
     mainwindow.h
     authdialog.h
     postdialog.h
+    feedwindow.h
+    profiledialog.h
     resources.qrc
 )
 

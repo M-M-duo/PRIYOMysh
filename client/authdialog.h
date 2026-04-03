@@ -25,4 +25,4 @@ private:
     QCheckBox *isPublicCheckBox;
 };
 
-#endif // AUTHDIALOG_H
+#endif

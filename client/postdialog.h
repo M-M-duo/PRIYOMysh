@@ -31,4 +31,4 @@ private:
     QString cropAndToBase64(const QString &filePath);
 };
 
-#endif // POSTDIALOG_H
+#endif
