@@ -131,7 +131,9 @@ void FeedWindow::loadPosts(bool append) {
     loadingLabel->setVisible(true);
     loadMoreButton->setVisible(false);
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, this, &FeedWindow::onLoadPostsFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onLoadPostsFinished(reply);
+    });
 }
 
 void FeedWindow::loadMore() {
@@ -163,7 +165,9 @@ void FeedWindow::onCreatePost() {
         QByteArray data = doc.toJson();
 
         QNetworkReply *reply = networkManager->post(request, data);
-        connect(reply, &QNetworkReply::finished, this, &FeedWindow::onPostReplyFinished);
+        connect(reply, &QNetworkReply::finished, [this, reply]() {
+            onPostReplyFinished(reply);
+        });
     }
 }
 
@@ -173,7 +177,9 @@ void FeedWindow::onProfileClick() {
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, this, &FeedWindow::onProfileInfoFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onProfileInfoFinished(reply);
+    });
 }
 
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {

@@ -87,7 +87,9 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
 
     QNetworkReply *reply = networkManager->post(request, QJsonDocument(json).toJson());
     reply->setProperty("auth_mode", mode);
-    connect(reply, &QNetworkReply::finished, this, &MainWindow::onAuthReplyFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onAuthReplyFinished(reply);
+    });
 }
 
 void MainWindow::sendSignInRequest(const QString &login, const QString &password) {
@@ -102,7 +104,9 @@ void MainWindow::sendSignInRequest(const QString &login, const QString &password
 
     QNetworkReply *reply = networkManager->post(request, QJsonDocument(json).toJson());
     reply->setProperty("auth_mode", "login");
-    connect(reply, &QNetworkReply::finished, this, &MainWindow::onSignInReplyFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onSignInReplyFinished(reply);
+    });
 }
 
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
