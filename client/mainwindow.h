@@ -23,6 +23,7 @@ private slots:
     void toggleAutoCheck();
     void onSignInClicked();
     void onRegisterClicked();
+    void onCreatePostClicked();
     void onAuthReplyFinished(QNetworkReply *reply);
     void onSignInReplyFinished(QNetworkReply *reply);
 
@@ -36,6 +37,7 @@ private:
 
     QPushButton *loginButton;
     QPushButton *registerButton;
+    QPushButton *createPostButton;
 
     QString authToken;
 

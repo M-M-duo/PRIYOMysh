@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include "authdialog.h"
+#include "postdialog.h"
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QJsonParseError>
 #include <QMessageBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QJsonArray>
 #include <QLabel>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -76,8 +78,24 @@ void MainWindow::setupUI() {
     )");
     connect(registerButton, &QPushButton::clicked, this, &MainWindow::onRegisterClicked);
 
+    createPostButton = new QPushButton("Create Post", this);
+    createPostButton->setStyleSheet(R"(
+        QPushButton {
+            background-color: #ffc107;
+            color: #212529;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #e0a800;
+        }
+    )");
+    connect(createPostButton, &QPushButton::clicked, this, &MainWindow::onCreatePostClicked);
+
     topBarLayout->addWidget(loginButton);
     topBarLayout->addWidget(registerButton);
+    topBarLayout->addWidget(createPostButton);
 
     mainLayout->addLayout(topBarLayout);
 
@@ -269,6 +287,102 @@ void MainWindow::onRegisterClicked() {
     showAuthDialog("register");
 }
 
+void MainWindow::onCreatePostClicked() {
+    if (authToken.isEmpty()) {
+        QMessageBox::warning(this, "Not authorized", "Please login first");
+        return;
+    }
+
+    PostDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString description = dialog.getDescription();
+        QString imageBase64 = dialog.getImageBase64();
+        QStringList tags = dialog.getTags();
+
+        if (description.isEmpty() && imageBase64.isEmpty()) {
+            QMessageBox::warning(this, "Error", "At least description or image is required");
+            return;
+        }
+
+        QUrl url("http://127.0.0.1:8000/api/posts");
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+        QJsonObject json;
+        json["content"] = description;
+        json["picture"] = imageBase64;
+        QJsonArray tagsArray;
+        for (const QString &tag : tags) {
+            tagsArray.append(tag);
+        }
+        json["tags"] = tagsArray;
+
+        QJsonDocument doc(json);
+        QByteArray data = doc.toJson();
+
+        QNetworkReply *reply = networkManager->post(request, data);
+        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+            if (reply->error() == QNetworkReply::NoError) {
+                QMessageBox::information(this, "Success", "Post created successfully");
+            } else {
+                QMessageBox::warning(this, "Failed", "Failed to create post: " + reply->errorString());
+            }
+            reply->deleteLater();
+        });
+    }
+}
+
+// void MainWindow::onCreatePostClicked() {
+//     // if (authToken.isEmpty()) {
+//     //     QMessageBox::warning(this, "Not authorized", "Please login first");
+//     //     return;
+//     // }
+
+//     PostDialog dialog(this);
+//     if (dialog.exec() == QDialog::Accepted) {
+//         QString description = dialog.getDescription();
+//         QString imageBase64 = dialog.getImageBase64();
+//         QStringList tags = dialog.getTags();
+
+//         if (description.isEmpty() && imageBase64.isEmpty()) {
+//             QMessageBox::warning(this, "Error", "At least description or image is required");
+//             return;
+//         }
+
+//         QUrl url("http://127.0.0.1:8000/api/posts");
+//         QNetworkRequest request(url);
+//         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+//         // if (!authToken.isEmpty()) {
+//         //     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+//         // }
+
+//         QJsonObject json;
+//         json["content"] = description;
+//         json["picture"] = imageBase64;
+//         QJsonArray tagsArray;
+//         for (const QString &tag : tags) {
+//             tagsArray.append(tag);
+//         }
+//         json["tags"] = tagsArray;
+
+//         QJsonDocument doc(json);
+//         QByteArray data = doc.toJson();
+
+//         QNetworkReply *reply = networkManager->post(request, data);
+//         connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+//             if (reply->error() == QNetworkReply::NoError) {
+//                 QMessageBox::information(this, "Success", "Post created successfully");
+//             } else {
+//                 QMessageBox::warning(this, "Failed", "Failed to create post: " + reply->errorString());
+//             }
+//             reply->deleteLater();
+//         });
+//     }
+// }
+
+
+
 void MainWindow::showAuthDialog(const QString &mode) {
     AuthDialog dialog(mode, this);
     if (dialog.exec() == QDialog::Accepted) {
@@ -281,7 +395,6 @@ void MainWindow::showAuthDialog(const QString &mode) {
 
         if (login.isEmpty() || password.isEmpty() || nickname.isEmpty() || email.isEmpty() || phone.isEmpty()) {
             QMessageBox msgBox;
-            // msgBox.setIconPixmap(QPixmap(":/source/warning_01.png"));
             QPixmap original(":/sources/warning_01.png");
             QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             msgBox.setIconPixmap(scaled);
@@ -302,7 +415,6 @@ void MainWindow::showSignInDialog(const QString &mode) {
         QString password = dialog.getPassword();
         if (login.isEmpty() || password.isEmpty()) {
             QMessageBox msgBox;
-            // msgBox.setIconPixmap(QPixmap(":/source/warning_01.png"));
             QPixmap original(":/sources/warning_01.png");
             QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             msgBox.setIconPixmap(scaled);
@@ -326,7 +438,6 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
     QJsonObject json;
     json["login"] = login;
     json["password"] = password;
-    // json["nickname"] = nickname;
     json["email"] = email;
     json["phone"] = phone;
     json["isPublic"] = isPublic;
