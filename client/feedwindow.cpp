@@ -7,8 +7,6 @@
 #include <QMessageBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QPushButton>
-#include <QLabel>
 #include <QScrollBar>
 #include <QDateTime>
 #include <QDebug>

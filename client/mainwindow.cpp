@@ -118,29 +118,9 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                QUrl url("http://127.0.0.1:8080/api/users/me");
-                QNetworkRequest req(url);
-                req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-                req.setRawHeader("Authorization", "Bearer " + token.toUtf8());
-                QNetworkReply *profileReply = networkManager->get(req);
-                profileReply->setProperty("token", token);
-                connect(profileReply, &QNetworkReply::finished, [this, profileReply]() {
-                    if (profileReply->error() == QNetworkReply::NoError) {
-                        QJsonDocument userDoc = QJsonDocument::fromJson(profileReply->readAll());
-                        if (userDoc.isObject()) {
-                            QJsonObject user = userDoc.object();
-                            QString token = profileReply->property("token").toString();
-                            FeedWindow *feed = new FeedWindow(token, user);
-                            feed->show();
-                            close();
-                        } else {
-                            QMessageBox::critical(this, "Error", "Invalid user data");
-                        }
-                    } else {
-                        QMessageBox::critical(this, "Error", "Failed to get profile: " + profileReply->errorString());
-                    }
-                    profileReply->deleteLater();
-                });
+                FeedWindow *feed = new FeedWindow(token, QJsonObject());
+                feed->show();
+                close();
             } else {
                 QMessageBox::information(this, "Registration", "Success, please sign in");
             }
@@ -160,29 +140,9 @@ void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                QUrl url("http://127.0.0.1:8080/api/users/me");
-                QNetworkRequest req(url);
-                req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-                req.setRawHeader("Authorization", "Bearer " + token.toUtf8());
-                QNetworkReply *profileReply = networkManager->get(req);
-                profileReply->setProperty("token", token);
-                connect(profileReply, &QNetworkReply::finished, [this, profileReply]() {
-                    if (profileReply->error() == QNetworkReply::NoError) {
-                        QJsonDocument userDoc = QJsonDocument::fromJson(profileReply->readAll());
-                        if (userDoc.isObject()) {
-                            QJsonObject user = userDoc.object();
-                            QString token = profileReply->property("token").toString();
-                            FeedWindow *feed = new FeedWindow(token, user);
-                            feed->show();
-                            close();
-                        } else {
-                            QMessageBox::critical(this, "Error", "Invalid user data");
-                        }
-                    } else {
-                        QMessageBox::critical(this, "Error", "Failed to get profile: " + profileReply->errorString());
-                    }
-                    profileReply->deleteLater();
-                });
+                FeedWindow *feed = new FeedWindow(token, QJsonObject());
+                feed->show();
+                close();
             } else {
                 QMessageBox::critical(this, "Error", "Token not received");
             }
