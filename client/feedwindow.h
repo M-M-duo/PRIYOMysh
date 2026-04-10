@@ -17,6 +17,7 @@ public:
     explicit FeedWindow(const QString &token, const QString &username = QString(), QWidget *parent = nullptr);
     ~FeedWindow();
 
+public slots:
     void onAuthorClicked(const QString &author);
 
 private slots:

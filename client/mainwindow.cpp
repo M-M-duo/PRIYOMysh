@@ -118,9 +118,9 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
 
     QByteArray data = QJsonDocument(json).toJson();
 
-    qDebug() << "===client=> " << url.toString();
-    qDebug() << QString::fromUtf8(data);
-    qDebug() << "";
+    qDebug().noquote() << "===client=> " << url.toString();
+    qDebug().noquote() << QString::fromUtf8(data);
+    qDebug().noquote() << "";
 
     QNetworkReply *reply = networkManager->post(request, data);
     reply->setProperty("auth_mode", mode);
@@ -141,9 +141,9 @@ void MainWindow::sendSignInRequest(const QString &login, const QString &password
 
     QByteArray data = QJsonDocument(json).toJson();
 
-    qDebug() << "===client=> " << url.toString();
-    qDebug() << QString::fromUtf8(data);
-    qDebug() << "";
+    qDebug().noquote() << "===client=> " << url.toString();
+    qDebug().noquote() << QString::fromUtf8(data);
+    qDebug().noquote() << "";
 
     QNetworkReply *reply = networkManager->post(request, data);
     reply->setProperty("auth_mode", "login");
@@ -155,9 +155,9 @@ void MainWindow::sendSignInRequest(const QString &login, const QString &password
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug() << "===server=> ";
-        qDebug() << QString::fromUtf8(response);
-        qDebug() << "";
+        qDebug().noquote() << "===server=> ";
+        qDebug().noquote() << QString::fromUtf8(response);
+        qDebug().noquote() << "";
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
@@ -171,7 +171,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             }
         }
     } else {
-        qDebug() << "===server error=> " << reply->errorString();
+        qDebug().noquote() << "===server error=> " << reply->errorString();
         showCustomError(this, reply->errorString());
     }
     reply->deleteLater();
@@ -180,9 +180,9 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
 void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug() << "===server=> ";
-        qDebug() << QString::fromUtf8(response);
-        qDebug() << "";
+        qDebug().noquote() << "===server=> ";
+        qDebug().noquote() << QString::fromUtf8(response);
+        qDebug().noquote() << "";
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
@@ -196,7 +196,7 @@ void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
             }
         }
     } else {
-        qDebug() << "===server error=> " << reply->errorString();
+        qDebug().noquote() << "===server error=> " << reply->errorString();
         showCustomError(this, reply->errorString());
     }
     reply->deleteLater();

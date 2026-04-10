@@ -51,7 +51,7 @@ public:
         layout->setSpacing(5);
         layout->setContentsMargins(5, 5, 5, 5);
 
-        QLabel *authorLabel = new QLabel(post["author"].toString());
+        authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
         authorLabel->setCursor(Qt::PointingHandCursor);
         authorLabel->installEventFilter(this);
@@ -91,8 +91,11 @@ public:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override {
-        if (event->type() == QEvent::MouseButtonPress && obj == children().first()) {
-            if (feedWindow) feedWindow->onAuthorClicked(author);
+        if (event->type() == QEvent::MouseButtonPress && obj == authorLabel) {
+            if (feedWindow) {
+                qDebug() << "Author clicked:" << author;
+                feedWindow->onAuthorClicked(author);
+            }
             return true;
         }
         return QWidget::eventFilter(obj, event);
@@ -101,6 +104,7 @@ protected:
 private:
     QString author;
     FeedWindow *feedWindow;
+    QLabel *authorLabel;
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
@@ -201,9 +205,9 @@ void FeedWindow::loadPosts(bool append) {
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
-    qDebug() << "===client=> " << url.toString();
-    qDebug() << "GET request with Authorization header";
-    qDebug() << "";
+    qDebug().noquote() << "===client=> " << url.toString();
+    qDebug().noquote() << "GET request with Authorization header";
+    qDebug().noquote() << "";
 
     loadingLabel->setVisible(true);
     loadMoreButton->setVisible(false);
@@ -248,9 +252,9 @@ void FeedWindow::onCreatePost() {
         QJsonDocument doc(json);
         QByteArray data = doc.toJson();
 
-        qDebug() << "===client=> " << url.toString();
-        qDebug() << QString::fromUtf8(data);
-        qDebug() << "";
+        qDebug().noquote() << "===client=> " << url.toString();
+        qDebug().noquote() << QString::fromUtf8(data);
+        qDebug().noquote() << "";
 
         QNetworkReply *reply = networkManager->post(request, data);
         connect(reply, &QNetworkReply::finished, [this, reply]() {
@@ -265,6 +269,7 @@ void FeedWindow::onProfileClick() {
 }
 
 void FeedWindow::onAuthorClicked(const QString &author) {
+    qDebug() << "Opening posts of author:" << author;
     FeedWindow *userFeed = new FeedWindow(authToken, author, this);
     userFeed->show();
 }
@@ -272,13 +277,13 @@ void FeedWindow::onAuthorClicked(const QString &author) {
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug() << "===server=> ";
-        qDebug() << QString::fromUtf8(response);
-        qDebug() << "";
+        qDebug().noquote() << "===server=> ";
+        qDebug().noquote() << QString::fromUtf8(response);
+        qDebug().noquote() << "";
         showCustomInfo(this, "Post created successfully");
         loadPosts(false);
     } else {
-        qDebug() << "===server error=> " << reply->errorString();
+        qDebug().noquote() << "===server error=> " << reply->errorString();
         showCustomError(this, "Failed to create post: " + reply->errorString());
     }
     reply->deleteLater();
@@ -288,9 +293,9 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
     loadingLabel->setVisible(false);
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug() << "===server=> ";
-        qDebug() << QString::fromUtf8(response);
-        qDebug() << "";
+        qDebug().noquote() << "===server=> ";
+        qDebug().noquote() << QString::fromUtf8(response);
+        qDebug().noquote() << "";
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isArray()) {
             QJsonArray posts = doc.array();
@@ -306,7 +311,7 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
             showCustomError(this, "Unexpected response format");
         }
     } else {
-        qDebug() << "===server error=> " << reply->errorString();
+        qDebug().noquote() << "===server error=> " << reply->errorString();
         showCustomError(this, "Failed to load feed: " + reply->errorString());
         loadMoreButton->setVisible(false);
     }
