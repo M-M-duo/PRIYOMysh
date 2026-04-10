@@ -57,20 +57,34 @@ public:
         authorLabel->installEventFilter(this);
         layout->addWidget(authorLabel);
 
-        // Изображение (если есть)
+        // Отображаем все картинки из поля img
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray images = post["img"].toArray();
             if (!images.isEmpty()) {
-                QString imgBase64 = images[0].toString();
-                if (!imgBase64.isEmpty()) {
-                    QPixmap pixmap;
-                    pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
-                    if (!pixmap.isNull()) {
-                        QLabel *imageLabel = new QLabel(this);
-                        imageLabel->setPixmap(pixmap.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-                        imageLabel->setAlignment(Qt::AlignCenter);
-                        layout->addWidget(imageLabel);
+                QHBoxLayout *imagesLayout = new QHBoxLayout();
+                imagesLayout->setSpacing(5);
+                int maxImages = qMin(images.size(), 10);
+                for (int i = 0; i < maxImages; ++i) {
+                    QString imgBase64 = images[i].toString();
+                    if (!imgBase64.isEmpty()) {
+                        QPixmap pixmap;
+                        pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
+                        if (!pixmap.isNull()) {
+                            // Масштабируем до 100x100 с сохранением пропорций
+                            QPixmap scaled = pixmap.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            QLabel *imageLabel = new QLabel(this);
+                            imageLabel->setPixmap(scaled);
+                            imageLabel->setFixedSize(100, 100);
+                            imageLabel->setScaledContents(false);
+                            imageLabel->setAlignment(Qt::AlignCenter);
+                            imagesLayout->addWidget(imageLabel);
+                        }
                     }
+                }
+                if (!imagesLayout->isEmpty()) {
+                    layout->addLayout(imagesLayout);
+                } else {
+                    delete imagesLayout;
                 }
             }
         }
