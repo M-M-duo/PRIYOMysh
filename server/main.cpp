@@ -27,8 +27,7 @@ void setupDatabase() {
             image TEXT, 
             token_number INTEGER DEFAULT 1, 
             update_token INTEGER DEFAULT 1
-        )
-                    )sql",
+        ))sql",
         [](const drogon::orm::Result &) { LOG_INFO << "users table ready"; },
         [](const drogon::orm::DrogonDbException &e) {
             LOG_ERROR << e.base().what();
@@ -67,6 +66,15 @@ void setupDatabase() {
         [](const drogon::orm::DrogonDbException &e) {
             LOG_ERROR << e.base().what();
         }
+    );
+
+    db->execSqlAsync(
+        R"sql(CREATE TABLE IF NOT EXISTS media (
+            id SERIAL PRIMARY KEY, 
+            id_post INTEGER REFERENCES posts(id) ON DELETE CASCADE, 
+            img VARCHAR(200) NOT NULL))sql",
+        [](const drogon::orm::Result &) { LOG_INFO << "media table ready"; },
+        [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); }
     );
 }
 
