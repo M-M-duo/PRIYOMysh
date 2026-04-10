@@ -57,7 +57,6 @@ public:
         authorLabel->installEventFilter(this);
         layout->addWidget(authorLabel);
 
-        // Отображаем все картинки из поля img
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray images = post["img"].toArray();
             if (!images.isEmpty()) {
@@ -70,7 +69,6 @@ public:
                         QPixmap pixmap;
                         pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
                         if (!pixmap.isNull()) {
-                            // Масштабируем до 100x100 с сохранением пропорций
                             QPixmap scaled = pixmap.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                             QLabel *imageLabel = new QLabel(this);
                             imageLabel->setPixmap(scaled);
