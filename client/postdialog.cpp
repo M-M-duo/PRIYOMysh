@@ -8,6 +8,7 @@
 #include <QRegularExpression>
 #include <QMessageBox>
 #include <QPixmap>
+#include <QEvent>
 
 PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
     setupUI();

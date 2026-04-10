@@ -200,4 +200,4 @@ void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
         showCustomError(this, reply->errorString());
     }
     reply->deleteLater();
-}1ё
+}

@@ -12,6 +12,7 @@
 #include <QFrame>
 #include <QPixmap>
 #include <QLabel>
+#include <QEvent>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
@@ -60,7 +61,6 @@ public:
         contentLabel->setWordWrap(true);
         layout->addWidget(contentLabel);
 
-        // Теги с хештегом
         QString tagsStr;
         QJsonArray tagsArr = post["tags"].toArray();
         for (const auto &tag : tagsArr) {
