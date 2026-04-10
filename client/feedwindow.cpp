@@ -57,15 +57,35 @@ public:
         authorLabel->installEventFilter(this);
         layout->addWidget(authorLabel);
 
+        // Изображение (если есть)
+        if (post.contains("img") && post["img"].isArray()) {
+            QJsonArray images = post["img"].toArray();
+            if (!images.isEmpty()) {
+                QString imgBase64 = images[0].toString();
+                if (!imgBase64.isEmpty()) {
+                    QPixmap pixmap;
+                    pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
+                    if (!pixmap.isNull()) {
+                        QLabel *imageLabel = new QLabel(this);
+                        imageLabel->setPixmap(pixmap.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                        imageLabel->setAlignment(Qt::AlignCenter);
+                        layout->addWidget(imageLabel);
+                    }
+                }
+            }
+        }
+
         QLabel *contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         layout->addWidget(contentLabel);
 
         QString tagsStr;
-        QJsonArray tagsArr = post["tags"].toArray();
-        for (const auto &tag : tagsArr) {
-            if (!tagsStr.isEmpty()) tagsStr += " ";
-            tagsStr += "#" + tag.toString();
+        if (post.contains("tags") && post["tags"].isArray()) {
+            QJsonArray tagsArr = post["tags"].toArray();
+            for (const auto &tag : tagsArr) {
+                if (!tagsStr.isEmpty()) tagsStr += " ";
+                tagsStr += "#" + tag.toString();
+            }
         }
         QLabel *tagsLabel = new QLabel(tagsStr);
         tagsLabel->setStyleSheet("color: #007bff;");
