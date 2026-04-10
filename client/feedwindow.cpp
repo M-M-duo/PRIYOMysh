@@ -1,6 +1,5 @@
 #include "feedwindow.h"
 #include "postdialog.h"
-#include "profiledialog.h"
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QJsonDocument>
@@ -11,29 +10,64 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QFrame>
+#include <QPixmap>
+#include <QLabel>
+
+static void showCustomWarning(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Warning");
+    msgBox.setText(text);
+    msgBox.exec();
+}
+
+static void showCustomError(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Error");
+    msgBox.setText(text);
+    msgBox.exec();
+}
+
+static void showCustomInfo(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Info");
+    msgBox.setText(text);
+    msgBox.exec();
+}
 
 class PostWidget : public QWidget {
 public:
-    PostWidget(const QJsonObject &post, QWidget *parent = nullptr) : QWidget(parent) {
+    PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr) : QWidget(parent), feedWindow(parent) {
         QVBoxLayout *layout = new QVBoxLayout(this);
         layout->setSpacing(5);
         layout->setContentsMargins(5, 5, 5, 5);
 
         QLabel *authorLabel = new QLabel(post["author"].toString());
-        authorLabel->setStyleSheet("font-weight: bold;");
+        authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
+        authorLabel->setCursor(Qt::PointingHandCursor);
+        authorLabel->installEventFilter(this);
         layout->addWidget(authorLabel);
 
         QLabel *contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         layout->addWidget(contentLabel);
 
+        // Теги с хештегом
         QString tagsStr;
         QJsonArray tagsArr = post["tags"].toArray();
         for (const auto &tag : tagsArr) {
-            if (!tagsStr.isEmpty()) tagsStr += ", ";
-            tagsStr += tag.toString();
+            if (!tagsStr.isEmpty()) tagsStr += " ";
+            tagsStr += "#" + tag.toString();
         }
-        QLabel *tagsLabel = new QLabel("Tags: " + tagsStr);
+        QLabel *tagsLabel = new QLabel(tagsStr);
         tagsLabel->setStyleSheet("color: #007bff;");
         layout->addWidget(tagsLabel);
 
@@ -51,11 +85,26 @@ public:
         likesLayout->addWidget(dislikesLabel);
         likesLayout->addStretch();
         layout->addLayout(likesLayout);
+
+        author = post["author"].toString();
     }
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override {
+        if (event->type() == QEvent::MouseButtonPress && obj == children().first()) {
+            if (feedWindow) feedWindow->onAuthorClicked(author);
+            return true;
+        }
+        return QWidget::eventFilter(obj, event);
+    }
+
+private:
+    QString author;
+    FeedWindow *feedWindow;
 };
 
-FeedWindow::FeedWindow(const QString &token, const QJsonObject &userInfo, QWidget *parent)
-    : QMainWindow(parent), authToken(token), userData(userInfo), currentOffset(0), limit(10)
+FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
+    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10)
 {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
@@ -65,18 +114,31 @@ FeedWindow::FeedWindow(const QString &token, const QJsonObject &userInfo, QWidge
 FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
-    setWindowTitle("Feed");
+    if (currentUsername == "me")
+        setWindowTitle("My Posts");
+    else if (!currentUsername.isEmpty() && currentUsername != "me")
+        setWindowTitle("Posts of " + currentUsername);
+    else
+        setWindowTitle("Feed");
     resize(600, 900);
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
 
     QHBoxLayout *topBar = new QHBoxLayout();
-    createPostButton = new QPushButton("Create Post", this);
-    profileButton = new QPushButton("👤 Profile", this);
-    topBar->addWidget(createPostButton);
-    topBar->addStretch();
-    topBar->addWidget(profileButton);
+    if (currentUsername.isEmpty()) {
+        createPostButton = new QPushButton("Create Post", this);
+        profileButton = new QPushButton("👤 My Profile", this);
+        topBar->addWidget(createPostButton);
+        topBar->addStretch();
+        topBar->addWidget(profileButton);
+        connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
+        connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
+    } else {
+        QPushButton *backButton = new QPushButton("← Back to Feed", this);
+        topBar->addWidget(backButton);
+        connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
+    }
     mainLayout->addLayout(topBar);
 
     scrollArea = new QScrollArea(this);
@@ -101,8 +163,6 @@ void FeedWindow::setupUI() {
 
     setCentralWidget(central);
 
-    connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
-    connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
 }
 
@@ -115,7 +175,7 @@ void FeedWindow::clearPosts() {
 }
 
 void FeedWindow::addPost(const QJsonObject &post) {
-    PostWidget *widget = new PostWidget(post);
+    PostWidget *widget = new PostWidget(post, this);
     postsLayout->addWidget(widget);
     QFrame *line = new QFrame();
     line->setFrameShape(QFrame::HLine);
@@ -128,7 +188,15 @@ void FeedWindow::loadPosts(bool append) {
         currentOffset = 0;
         clearPosts();
     }
-    QUrl url(QString("http://127.0.0.1:8080/api/posts/feed?limit=%1&offset=%2").arg(limit).arg(currentOffset));
+    QString endpoint;
+    if (currentUsername == "me") {
+        endpoint = QString("http://127.0.0.1:8080/api/posts/feed/my?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+    } else if (!currentUsername.isEmpty() && currentUsername != "me") {
+        endpoint = QString("http://127.0.0.1:8080/api/posts/feed/%1?limit=%2&offset=%3").arg(currentUsername).arg(limit).arg(currentOffset);
+    } else {
+        endpoint = QString("http://127.0.0.1:8080/api/posts/feed?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+    }
+    QUrl url(endpoint);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -154,8 +222,9 @@ void FeedWindow::onCreatePost() {
     PostDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
         QString description = dialog.getDescription();
-        if (description.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Description cannot be empty");
+        QStringList images = dialog.getImagesBase64();
+        if (description.isEmpty() && images.isEmpty()) {
+            showCustomWarning(this, "At least description or image is required");
             return;
         }
         QUrl url("http://127.0.0.1:8080/api/posts/new");
@@ -165,6 +234,11 @@ void FeedWindow::onCreatePost() {
 
         QJsonObject json;
         json["content"] = description;
+        QJsonArray imagesArray;
+        for (const QString &img : images) {
+            imagesArray.append(img);
+        }
+        json["img"] = imagesArray;
         QJsonArray tagsArray;
         for (const QString &tag : dialog.getTags()) {
             tagsArray.append(tag);
@@ -186,19 +260,13 @@ void FeedWindow::onCreatePost() {
 }
 
 void FeedWindow::onProfileClick() {
-    QUrl url("http://127.0.0.1:8080/api/users/me");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+    FeedWindow *myPostsWindow = new FeedWindow(authToken, "me", this);
+    myPostsWindow->show();
+}
 
-    qDebug() << "===client=> " << url.toString();
-    qDebug() << "GET request with Authorization header";
-    qDebug() << "";
-
-    QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
-        onProfileInfoFinished(reply);
-    });
+void FeedWindow::onAuthorClicked(const QString &author) {
+    FeedWindow *userFeed = new FeedWindow(authToken, author, this);
+    userFeed->show();
 }
 
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
@@ -207,31 +275,11 @@ void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
         qDebug() << "===server=> ";
         qDebug() << QString::fromUtf8(response);
         qDebug() << "";
-        QMessageBox::information(this, "Success", "Post created");
+        showCustomInfo(this, "Post created successfully");
         loadPosts(false);
     } else {
         qDebug() << "===server error=> " << reply->errorString();
-        showError("Failed to create post: " + reply->errorString());
-    }
-    reply->deleteLater();
-}
-
-void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        qDebug() << "===server=> ";
-        qDebug() << QString::fromUtf8(response);
-        qDebug() << "";
-        QJsonDocument doc = QJsonDocument::fromJson(response);
-        if (!doc.isNull() && doc.isObject()) {
-            ProfileDialog dialog(doc.object(), this);
-            dialog.exec();
-        } else {
-            showError("Invalid profile data");
-        }
-    } else {
-        qDebug() << "===server error=> " << reply->errorString();
-        showError("Failed to load profile: " + reply->errorString());
+        showCustomError(this, "Failed to create post: " + reply->errorString());
     }
     reply->deleteLater();
 }
@@ -255,16 +303,16 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
                 loadMoreButton->setVisible(false);
             }
         } else {
-            showError("Unexpected response format");
+            showCustomError(this, "Unexpected response format");
         }
     } else {
         qDebug() << "===server error=> " << reply->errorString();
-        showError("Failed to load feed: " + reply->errorString());
+        showCustomError(this, "Failed to load feed: " + reply->errorString());
         loadMoreButton->setVisible(false);
     }
     reply->deleteLater();
 }
 
 void FeedWindow::showError(const QString &message) {
-    QMessageBox::critical(this, "Error", message);
+    showCustomError(this, message);
 }

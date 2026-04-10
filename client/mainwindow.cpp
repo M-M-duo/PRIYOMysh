@@ -8,6 +8,37 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QDebug>
+#include <QPixmap>
+
+static void showCustomWarning(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Warning");
+    msgBox.setText(text);
+    msgBox.exec();
+}
+
+static void showCustomError(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Error");
+    msgBox.setText(text);
+    msgBox.exec();
+}
+
+static void showCustomInfo(QWidget *parent, const QString &text) {
+    QMessageBox msgBox(parent);
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    msgBox.setIconPixmap(scaled);
+    msgBox.setWindowTitle("Info");
+    msgBox.setText(text);
+    msgBox.exec();
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -49,7 +80,7 @@ void MainWindow::showAuthDialog(const QString &mode) {
         bool isPublic = dialog.isPublic();
 
         if (login.isEmpty() || password.isEmpty() || nickname.isEmpty() || email.isEmpty() || phone.isEmpty()) {
-            QMessageBox::warning(this, "Error", "All fields required");
+            showCustomWarning(this, "All fields required");
             return;
         }
         sendAuthRequest(nickname, login, password, email, phone, isPublic, mode);
@@ -62,7 +93,7 @@ void MainWindow::showSignInDialog(const QString &mode) {
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
         if (login.isEmpty() || password.isEmpty()) {
-            QMessageBox::warning(this, "Error", "Login and password required");
+            showCustomWarning(this, "Login and password required");
             return;
         }
         sendSignInRequest(login, password);
@@ -132,16 +163,16 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                FeedWindow *feed = new FeedWindow(token, QJsonObject());
+                FeedWindow *feed = new FeedWindow(token, QString());
                 feed->show();
                 close();
             } else {
-                QMessageBox::information(this, "Registration", "Success, please sign in");
+                showCustomInfo(this, "Registration successful, please sign in");
             }
         }
     } else {
         qDebug() << "===server error=> " << reply->errorString();
-        QMessageBox::critical(this, "Error", reply->errorString());
+        showCustomError(this, reply->errorString());
     }
     reply->deleteLater();
 }
@@ -157,16 +188,16 @@ void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                FeedWindow *feed = new FeedWindow(token, QJsonObject());
+                FeedWindow *feed = new FeedWindow(token, QString());
                 feed->show();
                 close();
             } else {
-                QMessageBox::critical(this, "Error", "Token not received");
+                showCustomError(this, "Token not received");
             }
         }
     } else {
         qDebug() << "===server error=> " << reply->errorString();
-        QMessageBox::critical(this, "Error", reply->errorString());
+        showCustomError(this, reply->errorString());
     }
     reply->deleteLater();
-}
+}1ё
