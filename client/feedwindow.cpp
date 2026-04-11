@@ -13,6 +13,9 @@
 #include <QPixmap>
 #include <QLabel>
 #include <QEvent>
+#include <QPushButton>
+#include <QGuiApplication>
+#include <QScreen>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
@@ -46,49 +49,63 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
 
 class PostWidget : public QWidget {
 public:
-    PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr) : QWidget(parent), feedWindow(parent) {
+    PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr) : QWidget(parent), feedWindow(parent), currentImageIndex(0) {
         QVBoxLayout *layout = new QVBoxLayout(this);
         layout->setSpacing(5);
         layout->setContentsMargins(5, 5, 5, 5);
+        layout->setAlignment(Qt::AlignCenter);
 
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
         authorLabel->setCursor(Qt::PointingHandCursor);
         authorLabel->installEventFilter(this);
+        authorLabel->setAlignment(Qt::AlignCenter);
         layout->addWidget(authorLabel);
 
         if (post.contains("img") && post["img"].isArray()) {
-            QJsonArray images = post["img"].toArray();
-            if (!images.isEmpty()) {
-                QHBoxLayout *imagesLayout = new QHBoxLayout();
-                imagesLayout->setSpacing(5);
-                int maxImages = qMin(images.size(), 10);
-                for (int i = 0; i < maxImages; ++i) {
-                    QString imgBase64 = images[i].toString();
-                    if (!imgBase64.isEmpty()) {
-                        QPixmap pixmap;
-                        pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
-                        if (!pixmap.isNull()) {
-                            QPixmap scaled = pixmap.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                            QLabel *imageLabel = new QLabel(this);
-                            imageLabel->setPixmap(scaled);
-                            imageLabel->setFixedSize(100, 100);
-                            imageLabel->setScaledContents(false);
-                            imageLabel->setAlignment(Qt::AlignCenter);
-                            imagesLayout->addWidget(imageLabel);
-                        }
-                    }
-                }
-                if (!imagesLayout->isEmpty()) {
-                    layout->addLayout(imagesLayout);
-                } else {
-                    delete imagesLayout;
+            QJsonArray imagesArray = post["img"].toArray();
+            for (const auto &img : imagesArray) {
+                QString base64 = img.toString();
+                if (!base64.isEmpty()) {
+                    images.append(base64);
                 }
             }
         }
 
-        QLabel *contentLabel = new QLabel(post["content"].toString());
+        if (!images.isEmpty()) {
+            QVBoxLayout *imageLayout = new QVBoxLayout();
+            imageLayout->setAlignment(Qt::AlignCenter);
+
+            imageLabel = new QLabel(this);
+            imageLabel->setFixedSize(300, 300);
+            imageLabel->setAlignment(Qt::AlignCenter);
+            imageLabel->setScaledContents(false);
+            imageLabel->setStyleSheet("border: 1px solid #ddd; background-color: #f8f9fa;");
+            updateImage();
+
+            QHBoxLayout *navLayout = new QHBoxLayout();
+            prevButton = new QPushButton("◀", this);
+            nextButton = new QPushButton("▶", this);
+            prevButton->setFixedSize(40, 40);
+            nextButton->setFixedSize(40, 40);
+            prevButton->setEnabled(images.size() > 1);
+            nextButton->setEnabled(images.size() > 1);
+            navLayout->addWidget(prevButton);
+            navLayout->addStretch();
+            navLayout->addWidget(nextButton);
+            navLayout->addStretch();
+
+            imageLayout->addWidget(imageLabel);
+            imageLayout->addLayout(navLayout);
+            layout->addLayout(imageLayout);
+
+            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
+            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+        }
+
+        contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
+        contentLabel->setAlignment(Qt::AlignCenter);
         layout->addWidget(contentLabel);
 
         QString tagsStr;
@@ -99,26 +116,57 @@ public:
                 tagsStr += "#" + tag.toString();
             }
         }
-        QLabel *tagsLabel = new QLabel(tagsStr);
+        tagsLabel = new QLabel(tagsStr);
         tagsLabel->setStyleSheet("color: #007bff;");
+        tagsLabel->setAlignment(Qt::AlignCenter);
         layout->addWidget(tagsLabel);
 
         QString createdAt = post["createdAt"].toString();
         QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
         if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
-        QLabel *dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"));
+        dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"));
         dateLabel->setStyleSheet("color: #6c757d;");
+        dateLabel->setAlignment(Qt::AlignCenter);
         layout->addWidget(dateLabel);
 
         QHBoxLayout *likesLayout = new QHBoxLayout();
-        QLabel *likesLabel = new QLabel("👍 " + QString::number(post["likesCount"].toInt()));
-        QLabel *dislikesLabel = new QLabel("👎 " + QString::number(post["dislikesCount"].toInt()));
+        likesLayout->setAlignment(Qt::AlignCenter);
+        likesLabel = new QLabel("👍 " + QString::number(post["likesCount"].toInt()));
+        dislikesLabel = new QLabel("👎 " + QString::number(post["dislikesCount"].toInt()));
         likesLayout->addWidget(likesLabel);
         likesLayout->addWidget(dislikesLabel);
         likesLayout->addStretch();
         layout->addLayout(likesLayout);
 
         author = post["author"].toString();
+    }
+
+private slots:
+    void prevImage() {
+        if (currentImageIndex > 0) {
+            currentImageIndex--;
+            updateImage();
+        }
+    }
+    void nextImage() {
+        if (currentImageIndex < images.size() - 1) {
+            currentImageIndex++;
+            updateImage();
+        }
+    }
+
+private:
+    void updateImage() {
+        if (images.isEmpty()) return;
+        QString base64 = images[currentImageIndex];
+        QPixmap pixmap;
+        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+        if (!pixmap.isNull()) {
+            QPixmap scaled = pixmap.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            imageLabel->setPixmap(scaled);
+        } else {
+            imageLabel->setText("Failed to load image");
+        }
     }
 
 protected:
@@ -133,10 +181,19 @@ protected:
         return QWidget::eventFilter(obj, event);
     }
 
-private:
     QString author;
     FeedWindow *feedWindow;
     QLabel *authorLabel;
+    QStringList images;
+    int currentImageIndex;
+    QLabel *imageLabel;
+    QLabel *contentLabel;
+    QLabel *tagsLabel;
+    QLabel *dateLabel;
+    QLabel *likesLabel;
+    QLabel *dislikesLabel;
+    QPushButton *prevButton;
+    QPushButton *nextButton;
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
@@ -156,7 +213,15 @@ void FeedWindow::setupUI() {
         setWindowTitle("Posts of " + currentUsername);
     else
         setWindowTitle("Feed");
-    resize(600, 900);
+
+    QScreen *screen = QGuiApplication::primaryScreen();
+    int screenHeight = screen->availableGeometry().height();
+    int windowHeight = screenHeight / 3;
+    setFixedSize(600, windowHeight);
+    setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
+    setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint);
+    setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
