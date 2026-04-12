@@ -215,9 +215,10 @@ void FeedWindow::setupUI() {
         setWindowTitle("Feed");
 
     QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().width();
+    int screenWidth = screen->availableGeometry().width();
+    int screenHeight = screen->availableGeometry().height();
     int windowwidth = screenHeight / 3;
-    setFixedSize(windowwidth, 700);
+    setFixedSize(windowwidth, screenHeight);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint);
