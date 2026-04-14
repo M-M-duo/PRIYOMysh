@@ -90,28 +90,39 @@ public:
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
             updateImage();
             contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
+        }
 
-            QHBoxLayout *buttonRow = new QHBoxLayout();
-            buttonRow->setContentsMargins(0, 5, 0, 5);
+        // Строка с описанием и стрелками по бокам
+        QHBoxLayout *descriptionRow = new QHBoxLayout();
+        descriptionRow->setContentsMargins(0, 0, 0, 0);
+        descriptionRow->setSpacing(5);
+
+        if (!images.isEmpty()) {
             prevButton = new QPushButton("◀", this);
             prevButton->setFixedSize(40, 40);
             prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
-            buttonRow->addWidget(prevButton);
-            buttonRow->addStretch();
-            nextButton = new QPushButton("▶", this);
-            nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
-            buttonRow->addWidget(nextButton);
-            contentLayout->addLayout(buttonRow);
-
-            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
-            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+            descriptionRow->addWidget(prevButton);
         }
 
         contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
-        contentLayout->addWidget(contentLabel);
+        contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+        descriptionRow->addWidget(contentLabel);
+
+        if (!images.isEmpty()) {
+            nextButton = new QPushButton("▶", this);
+            nextButton->setFixedSize(40, 40);
+            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
+            descriptionRow->addWidget(nextButton);
+        }
+
+        contentLayout->addLayout(descriptionRow);
+
+        if (!images.isEmpty()) {
+            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
+            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+        }
 
         QString tagsStr;
         if (post.contains("tags") && post["tags"].isArray()) {
@@ -232,7 +243,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(400, 845);
+    setFixedSize(420, 845);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
