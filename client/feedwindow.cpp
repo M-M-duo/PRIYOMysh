@@ -90,6 +90,22 @@ public:
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
             updateImage();
             contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
+
+            QHBoxLayout *buttonRow = new QHBoxLayout();
+            buttonRow->setContentsMargins(0, 5, 0, 5);
+            prevButton = new QPushButton("◀", this);
+            prevButton->setFixedSize(40, 40);
+            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
+            buttonRow->addWidget(prevButton);
+            buttonRow->addStretch();
+            nextButton = new QPushButton("▶", this);
+            nextButton->setFixedSize(40, 40);
+            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
+            buttonRow->addWidget(nextButton);
+            contentLayout->addLayout(buttonRow);
+
+            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
+            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
         }
 
         contentLabel = new QLabel(post["content"].toString());
@@ -125,24 +141,6 @@ public:
         likesLayout->addWidget(likesLabel);
         likesLayout->addWidget(dislikesLabel);
         contentLayout->addLayout(likesLayout);
-
-        if (!images.isEmpty()) {
-            QHBoxLayout *buttonRow = new QHBoxLayout();
-            buttonRow->setContentsMargins(0, 5, 0, 5);
-            prevButton = new QPushButton("◀", this);
-            prevButton->setFixedSize(40, 40);
-            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
-            buttonRow->addWidget(prevButton);
-            buttonRow->addStretch();
-            nextButton = new QPushButton("▶", this);
-            nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
-            buttonRow->addWidget(nextButton);
-            contentLayout->addLayout(buttonRow);
-
-            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
-            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
-        }
 
         centerLayout->addWidget(contentWidget);
         centerLayout->addStretch();
