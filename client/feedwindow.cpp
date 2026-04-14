@@ -63,7 +63,7 @@ public:
         QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
         contentLayout->setSpacing(5);
         contentLayout->setAlignment(Qt::AlignCenter);
-        contentWidget->setFixedWidth(350);
+        contentWidget->setFixedWidth(380);
 
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
@@ -83,13 +83,32 @@ public:
         }
 
         if (!images.isEmpty()) {
+            QHBoxLayout *imageRow = new QHBoxLayout();
+            imageRow->setAlignment(Qt::AlignCenter);
+            imageRow->setSpacing(0);
+
+            prevButton = new QPushButton("◀", this);
+            prevButton->setFixedSize(40, 40);
+            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
+            imageRow->addWidget(prevButton);
+
             imageLabel = new QLabel(this);
-            imageLabel->setFixedSize(350, 350);
+            imageLabel->setFixedSize(300, 300);
             imageLabel->setAlignment(Qt::AlignCenter);
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
             updateImage();
-            contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
+            imageRow->addWidget(imageLabel);
+
+            nextButton = new QPushButton("▶", this);
+            nextButton->setFixedSize(40, 40);
+            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
+            imageRow->addWidget(nextButton);
+
+            contentLayout->addLayout(imageRow);
+
+            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
+            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
         }
 
         contentLabel = new QLabel(post["content"].toString());
@@ -130,28 +149,10 @@ public:
         centerLayout->addStretch();
         mainLayout->addLayout(centerLayout);
 
-        if (!images.isEmpty()) {
-            QHBoxLayout *buttonRow = new QHBoxLayout();
-            buttonRow->setContentsMargins(0, 5, 0, 5);
-            prevButton = new QPushButton("◀", this);
-            prevButton->setFixedSize(40, 40);
-            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
-            buttonRow->addWidget(prevButton);
-            buttonRow->addStretch();
-            nextButton = new QPushButton("▶", this);
-            nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
-            buttonRow->addWidget(nextButton);
-            mainLayout->addLayout(buttonRow);
-
-            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
-            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
-        }
-
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        line->setFixedWidth(350);
+        line->setFixedWidth(380);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         author = post["author"].toString();
@@ -182,7 +183,7 @@ private:
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap scaled = pixmap.scaled(350, 350, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap scaled = pixmap.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             imageLabel->setPixmap(scaled);
         } else {
             imageLabel->setText("Failed to load image");
@@ -234,7 +235,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(400, 845);
+    setFixedSize(400, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
