@@ -50,17 +50,27 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
 class PostWidget : public QWidget {
 public:
     PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr) : QWidget(parent), feedWindow(parent), currentImageIndex(0) {
-        QVBoxLayout *layout = new QVBoxLayout(this);
-        layout->setSpacing(5);
-        layout->setContentsMargins(5, 5, 5, 5);
-        layout->setAlignment(Qt::AlignCenter);
+        QVBoxLayout *mainLayout = new QVBoxLayout(this);
+        mainLayout->setSpacing(5);
+        mainLayout->setContentsMargins(0, 5, 0, 5);
+        mainLayout->setAlignment(Qt::AlignCenter);
+
+        QHBoxLayout *centerLayout = new QHBoxLayout();
+        centerLayout->setContentsMargins(0, 0, 0, 0);
+        centerLayout->addStretch();
+
+        QWidget *contentWidget = new QWidget(this);
+        QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
+        contentLayout->setSpacing(5);
+        contentLayout->setAlignment(Qt::AlignCenter);
+        contentWidget->setFixedWidth(380);
 
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
         authorLabel->setCursor(Qt::PointingHandCursor);
         authorLabel->installEventFilter(this);
         authorLabel->setAlignment(Qt::AlignCenter);
-        layout->addWidget(authorLabel);
+        contentLayout->addWidget(authorLabel);
 
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray imagesArray = post["img"].toArray();
@@ -73,8 +83,14 @@ public:
         }
 
         if (!images.isEmpty()) {
-            QVBoxLayout *imageLayout = new QVBoxLayout();
-            imageLayout->setAlignment(Qt::AlignCenter);
+            QHBoxLayout *imageRow = new QHBoxLayout();
+            imageRow->setAlignment(Qt::AlignCenter);
+            imageRow->setSpacing(0);
+
+            prevButton = new QPushButton("◀", this);
+            prevButton->setFixedSize(40, 40);
+            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
+            imageRow->addWidget(prevButton);
 
             imageLabel = new QLabel(this);
             imageLabel->setFixedSize(300, 300);
@@ -82,22 +98,14 @@ public:
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: 1px solid #ddd; background-color: #f8f9fa;");
             updateImage();
+            imageRow->addWidget(imageLabel);
 
-            QHBoxLayout *navLayout = new QHBoxLayout();
-            prevButton = new QPushButton("◀", this);
             nextButton = new QPushButton("▶", this);
-            prevButton->setFixedSize(40, 40);
             nextButton->setFixedSize(40, 40);
-            prevButton->setEnabled(images.size() > 1);
-            nextButton->setEnabled(images.size() > 1);
-            navLayout->addWidget(prevButton);
-            navLayout->addStretch();
-            navLayout->addWidget(nextButton);
-            navLayout->addStretch();
+            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
+            imageRow->addWidget(nextButton);
 
-            imageLayout->addWidget(imageLabel);
-            imageLayout->addLayout(navLayout);
-            layout->addLayout(imageLayout);
+            contentLayout->addLayout(imageRow);
 
             connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
             connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
@@ -106,7 +114,7 @@ public:
         contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
-        layout->addWidget(contentLabel);
+        contentLayout->addWidget(contentLabel);
 
         QString tagsStr;
         if (post.contains("tags") && post["tags"].isArray()) {
@@ -119,7 +127,7 @@ public:
         tagsLabel = new QLabel(tagsStr);
         tagsLabel->setStyleSheet("color: #007bff;");
         tagsLabel->setAlignment(Qt::AlignCenter);
-        layout->addWidget(tagsLabel);
+        contentLayout->addWidget(tagsLabel);
 
         QString createdAt = post["createdAt"].toString();
         QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
@@ -127,7 +135,7 @@ public:
         dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"));
         dateLabel->setStyleSheet("color: #6c757d;");
         dateLabel->setAlignment(Qt::AlignCenter);
-        layout->addWidget(dateLabel);
+        contentLayout->addWidget(dateLabel);
 
         QHBoxLayout *likesLayout = new QHBoxLayout();
         likesLayout->setAlignment(Qt::AlignCenter);
@@ -135,8 +143,17 @@ public:
         dislikesLabel = new QLabel("👎 " + QString::number(post["dislikesCount"].toInt()));
         likesLayout->addWidget(likesLabel);
         likesLayout->addWidget(dislikesLabel);
-        likesLayout->addStretch();
-        layout->addLayout(likesLayout);
+        contentLayout->addLayout(likesLayout);
+
+        centerLayout->addWidget(contentWidget);
+        centerLayout->addStretch();
+        mainLayout->addLayout(centerLayout);
+
+        QFrame *line = new QFrame(this);
+        line->setFrameShape(QFrame::HLine);
+        line->setFrameShadow(QFrame::Sunken);
+        line->setFixedWidth(380);
+        mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         author = post["author"].toString();
     }
@@ -146,12 +163,16 @@ private slots:
         if (currentImageIndex > 0) {
             currentImageIndex--;
             updateImage();
+            prevButton->setEnabled(currentImageIndex > 0);
+            nextButton->setEnabled(currentImageIndex < images.size() - 1);
         }
     }
     void nextImage() {
         if (currentImageIndex < images.size() - 1) {
             currentImageIndex++;
             updateImage();
+            prevButton->setEnabled(currentImageIndex > 0);
+            nextButton->setEnabled(currentImageIndex < images.size() - 1);
         }
     }
 
@@ -215,13 +236,11 @@ void FeedWindow::setupUI() {
         setWindowTitle("Feed");
 
     QScreen *screen = QGuiApplication::primaryScreen();
-    int screenWidth = screen->availableGeometry().width();
     int screenHeight = screen->availableGeometry().height();
-    int windowwidth = screenHeight / 3;
-    setFixedSize(windowwidth, screenHeight);
+    int windowHeight = screenHeight / 3;
+    setFixedSize(600, windowHeight);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
-    setWindowFlags(windowFlags() & ~Qt::WindowCloseButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QWidget *central = new QWidget(this);
@@ -279,10 +298,6 @@ void FeedWindow::clearPosts() {
 void FeedWindow::addPost(const QJsonObject &post) {
     PostWidget *widget = new PostWidget(post, this);
     postsLayout->addWidget(widget);
-    QFrame *line = new QFrame();
-    line->setFrameShape(QFrame::HLine);
-    line->setFrameShadow(QFrame::Sunken);
-    postsLayout->addWidget(line);
 }
 
 void FeedWindow::loadPosts(bool append) {
