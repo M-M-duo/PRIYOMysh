@@ -11,10 +11,6 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent)
     QVBoxLayout *layout = new QVBoxLayout(this);
 
     if (mode == "register") {
-        layout->addWidget(new QLabel("Nickname:"));
-        nicknameEdit = new QLineEdit(this);
-        layout->addWidget(nicknameEdit);
-
         layout->addWidget(new QLabel("Email:"));
         emailEdit = new QLineEdit(this);
         layout->addWidget(emailEdit);
@@ -42,10 +38,6 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent)
     layout->addWidget(buttonBox);
 }
 
-QString AuthDialog::getNickname() const {
-    return nicknameEdit ? nicknameEdit->text() : QString();
-}
-
 QString AuthDialog::getLogin() const {
     return loginEdit->text();
 }
@@ -65,4 +57,3 @@ QString AuthDialog::getPhone() const {
 bool AuthDialog::isPublic() const {
     return isPublicCheckBox ? isPublicCheckBox->isChecked() : false;
 }
-//TODO: убрать поле nickname

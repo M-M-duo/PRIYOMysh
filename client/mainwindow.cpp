@@ -32,7 +32,7 @@ static void showCustomError(QWidget *parent, const QString &text) {
 
 static void showCustomInfo(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
-    QPixmap original(":/sources/warning_01.png");
+    QPixmap original(":/sources/warn_happy.png");
     QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     msgBox.setIconPixmap(scaled);
     msgBox.setWindowTitle("Info");
@@ -72,18 +72,17 @@ void MainWindow::onRegisterClicked() {
 void MainWindow::showAuthDialog(const QString &mode) {
     AuthDialog dialog(mode, this);
     if (dialog.exec() == QDialog::Accepted) {
-        QString nickname = dialog.getNickname();
         QString login = dialog.getLogin();
         QString password = dialog.getPassword();
         QString email = dialog.getEmail();
         QString phone = dialog.getPhone();
         bool isPublic = dialog.isPublic();
 
-        if (login.isEmpty() || password.isEmpty() || nickname.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+        if (login.isEmpty() || password.isEmpty() || email.isEmpty() || phone.isEmpty()) {
             showCustomWarning(this, "All fields required");
             return;
         }
-        sendAuthRequest(nickname, login, password, email, phone, isPublic, mode);
+        sendAuthRequest(login, password, email, phone, isPublic, mode);
     }
 }
 
@@ -100,7 +99,7 @@ void MainWindow::showSignInDialog(const QString &mode) {
     }
 }
 
-void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, const QString &password,
+void MainWindow::sendAuthRequest(const QString &login, const QString &password,
                                  const QString &email, const QString &phone, bool isPublic, const QString &mode) {
     QUrl url(QString("http://127.0.0.1:8080/api/auth/%1").arg(mode));
     QNetworkRequest request(url);
@@ -110,7 +109,6 @@ void MainWindow::sendAuthRequest(const QString &nickname, const QString &login, 
     QJsonObject json;
     json["login"] = login;
     json["password"] = password;
-    // json["nickname"] = nickname;
     json["email"] = email;
     json["phone"] = phone;
     json["isPublic"] = isPublic;
@@ -171,8 +169,14 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             }
         }
     } else {
-        qDebug().noquote() << "===server error=> " << reply->errorString();
-        showCustomError(this, reply->errorString());
+        QByteArray response = reply->readAll();
+        QString errorMsg = reply->errorString();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject() && doc.object().contains("reason")) {
+            errorMsg = doc.object()["reason"].toString();
+        }
+        qDebug().noquote() << "===server error=> " << errorMsg;
+        showCustomError(this, errorMsg);
     }
     reply->deleteLater();
 }
@@ -196,8 +200,14 @@ void MainWindow::onSignInReplyFinished(QNetworkReply *reply) {
             }
         }
     } else {
-        qDebug().noquote() << "===server error=> " << reply->errorString();
-        showCustomError(this, reply->errorString());
+        QByteArray response = reply->readAll();
+        QString errorMsg = reply->errorString();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject() && doc.object().contains("reason")) {
+            errorMsg = doc.object()["reason"].toString();
+        }
+        qDebug().noquote() << "===server error=> " << errorMsg;
+        showCustomError(this, errorMsg);
     }
     reply->deleteLater();
 }

@@ -39,7 +39,7 @@ static void showCustomError(QWidget *parent, const QString &text) {
 
 static void showCustomInfo(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
-    QPixmap original(":/sources/warning_01.png");
+    QPixmap original(":/sources/warn_happy.png");
     QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     msgBox.setIconPixmap(scaled);
     msgBox.setWindowTitle("Info");
@@ -237,7 +237,7 @@ void FeedWindow::setupUI() {
     QScreen *screen = QGuiApplication::primaryScreen();
     int screenHeight = screen->availableGeometry().height();
     int windowHeight = screenHeight / 3;
-    setFixedSize(400, 845);
+    setFixedSize(600, windowHeight);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
@@ -395,8 +395,14 @@ void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
         showCustomInfo(this, "Post created successfully");
         loadPosts(false);
     } else {
-        qDebug().noquote() << "===server error=> " << reply->errorString();
-        showCustomError(this, "Failed to create post: " + reply->errorString());
+        QByteArray response = reply->readAll();
+        QString errorMsg = reply->errorString();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject() && doc.object().contains("reason")) {
+            errorMsg = doc.object()["reason"].toString();
+        }
+        qDebug().noquote() << "===server error=> " << errorMsg;
+        showCustomError(this, "Failed to create post: " + errorMsg);
     }
     reply->deleteLater();
 }
@@ -423,8 +429,14 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
             showCustomError(this, "Unexpected response format");
         }
     } else {
-        qDebug().noquote() << "===server error=> " << reply->errorString();
-        showCustomError(this, "Failed to load feed: " + reply->errorString());
+        QByteArray response = reply->readAll();
+        QString errorMsg = reply->errorString();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject() && doc.object().contains("reason")) {
+            errorMsg = doc.object()["reason"].toString();
+        }
+        qDebug().noquote() << "===server error=> " << errorMsg;
+        showCustomError(this, "Failed to load feed: " + errorMsg);
         loadMoreButton->setVisible(false);
     }
     reply->deleteLater();
