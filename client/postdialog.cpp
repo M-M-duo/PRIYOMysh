@@ -89,10 +89,15 @@ QString PostDialog::cropAndToBase64(const QString &filePath) {
     int y = (image.height() - size) / 2;
     QImage cropped = image.copy(x, y, size, size);
 
+    const int maxSize = 300;
+    if (cropped.width() > maxSize || cropped.height() > maxSize) {
+        cropped = cropped.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+
     QByteArray byteArray;
     QBuffer buffer(&byteArray);
     buffer.open(QIODevice::WriteOnly);
-    cropped.save(&buffer, "PNG");
+    cropped.save(&buffer, "JPEG", 70);
     buffer.close();
 
     return QString::fromLatin1(byteArray.toBase64());
