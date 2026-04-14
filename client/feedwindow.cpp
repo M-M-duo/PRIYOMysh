@@ -63,7 +63,7 @@ public:
         QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
         contentLayout->setSpacing(5);
         contentLayout->setAlignment(Qt::AlignCenter);
-        contentWidget->setFixedWidth(380);
+        contentWidget->setFixedWidth(420);
 
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
@@ -84,7 +84,7 @@ public:
 
         if (!images.isEmpty()) {
             imageLabel = new QLabel(this);
-            imageLabel->setFixedSize(300, 300);
+            imageLabel->setFixedSize(400, 400);
             imageLabel->setAlignment(Qt::AlignCenter);
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
@@ -92,7 +92,6 @@ public:
             contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
         }
 
-        // Строка с описанием и стрелками по бокам
         QHBoxLayout *descriptionRow = new QHBoxLayout();
         descriptionRow->setContentsMargins(0, 0, 0, 0);
         descriptionRow->setSpacing(5);
@@ -107,6 +106,7 @@ public:
         contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
+        contentLabel->setMinimumHeight(80);
         contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
         descriptionRow->addWidget(contentLabel);
 
@@ -160,7 +160,7 @@ public:
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        line->setFixedWidth(380);
+        line->setFixedWidth(420);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         author = post["author"].toString();
@@ -191,7 +191,7 @@ private:
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap scaled = pixmap.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap scaled = pixmap.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             imageLabel->setPixmap(scaled);
         } else {
             imageLabel->setText("Failed to load image");
@@ -243,7 +243,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(420, 845);
+    setFixedSize(420, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);

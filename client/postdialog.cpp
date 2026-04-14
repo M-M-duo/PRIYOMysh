@@ -89,7 +89,7 @@ QString PostDialog::cropAndToBase64(const QString &filePath) {
     int y = (image.height() - size) / 2;
     QImage cropped = image.copy(x, y, size, size);
 
-    const int maxSize = 300;
+    const int maxSize = 500;
     if (cropped.width() > maxSize || cropped.height() > maxSize) {
         cropped = cropped.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
