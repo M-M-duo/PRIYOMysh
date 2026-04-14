@@ -65,3 +65,4 @@ QString AuthDialog::getPhone() const {
 bool AuthDialog::isPublic() const {
     return isPublicCheckBox ? isPublicCheckBox->isChecked() : false;
 }
+//TODO: убрать поле nickname
