@@ -83,32 +83,13 @@ public:
         }
 
         if (!images.isEmpty()) {
-            QHBoxLayout *imageRow = new QHBoxLayout();
-            imageRow->setAlignment(Qt::AlignCenter);
-            imageRow->setSpacing(0);
-
-            prevButton = new QPushButton("◀", this);
-            prevButton->setFixedSize(40, 40);
-            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
-            imageRow->addWidget(prevButton);
-
             imageLabel = new QLabel(this);
             imageLabel->setFixedSize(300, 300);
             imageLabel->setAlignment(Qt::AlignCenter);
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
             updateImage();
-            imageRow->addWidget(imageLabel);
-
-            nextButton = new QPushButton("▶", this);
-            nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
-            imageRow->addWidget(nextButton);
-
-            contentLayout->addLayout(imageRow);
-
-            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
-            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+            contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
         }
 
         contentLabel = new QLabel(post["content"].toString());
@@ -144,6 +125,24 @@ public:
         likesLayout->addWidget(likesLabel);
         likesLayout->addWidget(dislikesLabel);
         contentLayout->addLayout(likesLayout);
+
+        if (!images.isEmpty()) {
+            QHBoxLayout *buttonRow = new QHBoxLayout();
+            buttonRow->setContentsMargins(0, 5, 0, 5);
+            prevButton = new QPushButton("◀", this);
+            prevButton->setFixedSize(40, 40);
+            prevButton->setEnabled(images.size() > 1 && currentImageIndex > 0);
+            buttonRow->addWidget(prevButton);
+            buttonRow->addStretch();
+            nextButton = new QPushButton("▶", this);
+            nextButton->setFixedSize(40, 40);
+            nextButton->setEnabled(images.size() > 1 && currentImageIndex < images.size() - 1);
+            buttonRow->addWidget(nextButton);
+            contentLayout->addLayout(buttonRow);
+
+            connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
+            connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+        }
 
         centerLayout->addWidget(contentWidget);
         centerLayout->addStretch();
@@ -235,7 +234,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(400, 840);
+    setFixedSize(400, 845);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
