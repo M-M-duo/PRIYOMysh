@@ -63,7 +63,7 @@ public:
         QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
         contentLayout->setSpacing(5);
         contentLayout->setAlignment(Qt::AlignCenter);
-        contentWidget->setFixedWidth(375);
+        contentWidget->setFixedWidth(350);
 
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
@@ -84,7 +84,7 @@ public:
 
         if (!images.isEmpty()) {
             imageLabel = new QLabel(this);
-            imageLabel->setFixedSize(375, 375);
+            imageLabel->setFixedSize(350, 350);
             imageLabel->setAlignment(Qt::AlignCenter);
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
@@ -151,7 +151,7 @@ public:
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        line->setFixedWidth(375);
+        line->setFixedWidth(350);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         author = post["author"].toString();
@@ -182,7 +182,7 @@ private:
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap scaled = pixmap.scaled(375, 375, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap scaled = pixmap.scaled(350, 350, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             imageLabel->setPixmap(scaled);
         } else {
             imageLabel->setText("Failed to load image");
@@ -234,10 +234,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().height();
-    int windowHeight = screenHeight / 3;
-    setFixedSize(600, windowHeight);
+    setFixedSize(400, 845);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
