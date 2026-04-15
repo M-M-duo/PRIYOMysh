@@ -243,7 +243,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(420, 840);
+    setFixedSize(450, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
