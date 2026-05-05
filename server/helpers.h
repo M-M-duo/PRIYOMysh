@@ -7,6 +7,11 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <fstream>
+#include <filesystem>
+#include <random>
+#include <chrono>
+#include <drogon/utils/Utilities.h>
 
 using namespace drogon;
 
@@ -143,4 +148,43 @@ inline bool validatePhone(const std::string &phone) {
 
 inline bool validateImage(const std::string &image) {
     return image.length() <= 200;
+}
+
+inline std::string generateFilename(const std::string& extension = ".jpg") {
+    auto now = std::chrono::system_clock::now();
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(100000, 999999);
+    return std::to_string(timestamp) + "_" + std::to_string(dis(gen)) + extension;
+}
+
+inline bool saveBase64(const std::string& base64Data, const std::string& filePath) {
+    LOG_INFO << "saveBase64 started";
+    std::string decoded = drogon::utils::base64Decode(base64Data);
+    LOG_INFO << "decoded Base64";
+    if (decoded.empty()) {
+        LOG_ERROR << "Failed to decode base64 image";
+        return false;
+    }
+    std::ofstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR << "Failed to open file: " << filePath;
+        return false;
+    }
+    file.write(decoded.data(), decoded.size());
+    file.close();
+    return true;
+}
+
+inline std::string loadImageAsBase64(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR << "Failed to open image file: " << filePath;
+        return "";
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+    return drogon::utils::base64Encode(content);
 }

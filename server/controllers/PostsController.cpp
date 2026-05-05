@@ -59,7 +59,8 @@ static void fetchPost(
     auto db = getDbClient();
     db->execSqlAsync(
         R"sql(SELECT p.*, u.is_public as author_public, 
-                     (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1 
+                     (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                     (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                      FROM posts p JOIN users u ON u.login = p.author WHERE p.id_uuid = $1)sql",
         [callback, currentLogin, db](const drogon::orm::Result &r) {
             if (r.empty()) {
@@ -69,6 +70,7 @@ static void fetchPost(
             auto row = r[0];
             std::string author = row["author"].as<std::string>();
             bool authorPublic = row["author_public"].as<bool>();
+            std::string imagesStr = row["images"].as<std::string>();
             std::string tagsStr = row["tags1"].as<std::string>();
             std::vector<std::string> tags;
             if (!tagsStr.empty()) {
@@ -92,6 +94,16 @@ static void fetchPost(
             post["author"] = author;
             for (const auto &t : tags) {
                 post["tags"].append(t);
+            }
+            if (!imagesStr.empty()) {
+                std::istringstream iss(imagesStr);
+                std::string imgPath;
+                while (std::getline(iss, imgPath, ',')) {
+                    std::string base64 = loadImageAsBase64(imgPath);
+                    if (!base64.empty()) {
+                        post["img"].append(base64);
+                    }
+                }
             }
             post["createdAt"] = row["created_at"].as<std::string>();
             post["likesCount"] = 0;
@@ -134,6 +146,18 @@ static Json::Value buildPostsJson(const drogon::orm::Result &r) {
             std::string tag;
             while (std::getline(iss, tag, ',')) {
                 post["tags"].append(tag);
+            }
+        }
+
+        std::string imagesStr = row["images"].as<std::string>();
+        if (!imagesStr.empty()) {
+            std::istringstream iss(imagesStr);
+            std::string imgPath;
+            while (std::getline(iss, imgPath, ',')) {
+                std::string base64 = loadImageAsBase64(imgPath);
+                if (!base64.empty()) {
+                    post["img"].append(base64);
+                }
             }
         }
 
@@ -206,6 +230,79 @@ static void sendInternalError(Callback callback) {
     callback(resp);
 }
 
+static void saveImages(
+    int postId,
+    const Json::Value &imgArray,
+    const Json::Value &postJson,
+    std::function<void(const drogon::HttpResponsePtr &)> callback
+) {
+    LOG_INFO << "saveImages called, postId=" << postId
+             << ", imgArray size=" << imgArray.size();
+    try {
+        if (imgArray.empty()) {
+            LOG_INFO << "No images, sending response";
+            auto resp = drogon::HttpResponse::newHttpJsonResponse(postJson);
+            resp->setStatusCode(k200OK);
+            callback(resp);
+            return;
+        }
+
+        const std::string mediaDir = "../media/";
+        if (!std::filesystem::exists(mediaDir)) {
+            std::filesystem::create_directory(mediaDir);
+        }
+
+        auto db = getDbClient();
+        for (const auto &img : imgArray) {
+            if (!img.isString()) {
+                LOG_ERROR << "Invalid image entry (not a string)";
+                sendBadRequest("Invalid image entry", callback);
+                return;
+            }
+            std::string base64 = img.asString();
+            std::string filename = generateFilename(".jpg");
+            std::string filePath = mediaDir + filename;
+            LOG_INFO << "Saving image to " << filePath;
+            if (!saveBase64(base64, filePath)) {
+                LOG_ERROR << "Failed to save base64 image to " << filePath;
+                sendInternalError(callback);
+                return;
+            }
+            // try {
+            //     db->execSqlSync("INSERT INTO media (id_post, img) VALUES ($1,
+            //     $2)", postId, filePath); LOG_INFO << "Inserted into media:
+            //     postId=" << postId << ", path=" << filePath;
+            // } catch (const drogon::orm::DrogonDbException& e) {
+            //     LOG_ERROR << "DB insert error: " << e.base().what();
+            //     sendInternalError(callback);
+            //     return;
+            // }
+            db->execSqlAsync(
+                "INSERT INTO media (id_post, img) VALUES ($1, $2)",
+                [callback, postJson](const drogon::orm::Result &) {
+                    LOG_INFO << "Insert successful, sending response";
+                    auto resp =
+                        drogon::HttpResponse::newHttpJsonResponse(postJson);
+                    resp->setStatusCode(k200OK);
+                    callback(resp);
+                },
+                [callback](const drogon::orm::DrogonDbException &e) {
+                    LOG_ERROR << "Insert error: " << e.base().what();
+                    sendInternalError(callback);
+                },
+                postId, filePath
+            );
+        }
+        LOG_INFO << "All images saved, sending response";
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(postJson);
+        resp->setStatusCode(k200OK);
+        callback(resp);
+    } catch (const std::exception &e) {
+        LOG_ERROR << "Exception in saveImages: " << e.what();
+        sendInternalError(callback);
+    }
+}
+
 void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
@@ -257,6 +354,12 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
             }
         }
 
+        auto imgArray = json->get("img", Json::arrayValue);
+        if (!imgArray.isArray()) {
+            sendBadRequest("Invalid img field", callback);
+            return;
+        }
+
         auto db = getDbClient();
         auto now = trantor::Date::now();
         std::string createdAt =
@@ -265,8 +368,8 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
         db->execSqlAsync(
             R"sql(INSERT INTO posts (content, author, created_at) VALUES ($1, $2, 
             $3) RETURNING id, id_uuid)sql",
-            [callback, tags, createdAt, login,
-             content](const drogon::orm::Result &r) {
+            [callback, tags, createdAt, login, content,
+             imgArray](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     Json::Value ret;
                     ret["reason"] = "Post creation failed";
@@ -301,9 +404,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                 post["likesCount"] = 0;
                 post["dislikesCount"] = 0;
 
-                auto resp = HttpResponse::newHttpJsonResponse(post);
-                resp->setStatusCode(k200OK);
-                callback(resp);
+                saveImages(postId, imgArray, post, callback);
             },
             [callback](const drogon::orm::DrogonDbException &e) {
                 LOG_ERROR << e.base().what();
@@ -373,7 +474,8 @@ void PostsController::myFeed(const HttpRequestPtr &req, Callback &&callback) {
         db->execSqlAsync(
             R"sql(
                 SELECT p.id_uuid, p.content, p.author, p.created_at,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1
+                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                 FROM posts p
                 WHERE p.author = $1
                 ORDER BY p.created_at DESC
@@ -426,7 +528,8 @@ void PostsController::userFeed(
                     db->execSqlAsync(
                         R"sql(
                         SELECT p.id_uuid, p.content, p.author, p.created_at,
-                               (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1
+                               (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
+                               (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                         FROM posts p
                         WHERE p.author = $1
                         ORDER BY p.created_at DESC
@@ -463,7 +566,8 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
         db->execSqlAsync(
             R"sql(
                 SELECT p.id_uuid, p.content, p.author, p.created_at,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1
+                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
+                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                 FROM posts p
                 JOIN users u ON u.login = p.author
                 WHERE u.is_public = true
