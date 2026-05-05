@@ -188,3 +188,41 @@ inline std::string loadImageAsBase64(const std::string& filePath) {
     std::string content = buffer.str();
     return drogon::utils::base64Encode(content);
 }
+
+inline void verifyToken(
+    const HttpRequestPtr &req,
+    std::function<void(std::optional<std::string>)> callback
+) {
+    auto auth = req->getHeader("Authorization");
+    if (auth.empty() || auth.substr(0, 7) != "Bearer ") {
+        callback(std::nullopt);
+        return;
+    }
+    std::string token = auth.substr(7);
+    auto payload = getTokenContent(token);
+    if (!payload || payload->exp < std::chrono::system_clock::time_point()) {
+        callback(std::nullopt);
+        return;
+    }
+    auto db = getDbClient();
+    db->execSqlAsync(
+        R"sql(SELECT token_number FROM users WHERE login = $1)sql",
+        [payload, callback](const drogon::orm::Result &r) {
+            if (r.empty()) {
+                callback(std::nullopt);
+                return;
+            }
+            int dbTokenNumber = r[0]["token_number"].as<int>();
+            if (dbTokenNumber != payload->token_number) {
+                callback(std::nullopt);
+                return;
+            }
+            callback(payload->login);
+        },
+        [callback](const drogon::orm::DrogonDbException &e) {
+            LOG_ERROR << e.base().what();
+            callback(std::nullopt);
+        },
+        payload->login
+    );
+}

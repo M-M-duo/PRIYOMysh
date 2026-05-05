@@ -1,55 +1,13 @@
-#include "PostsController.h"
+#include "PostsController.hpp"
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpTypes.h>
 #include <trantor/utils/Date.h>
 #include <iomanip>
 #include <sstream>
-#include "helpers.h"
+#include "helpers.hpp"
 
 using namespace drogon;
-
-static void verifyToken(
-    const HttpRequestPtr &req,
-    std::function<void(std::optional<std::string>)> callback
-) {
-    auto auth = req->getHeader("Authorization");
-    if (auth.empty() || auth.substr(0, 7) != "Bearer ") {
-        std::cout << "nonBearer";
-        callback(std::nullopt);
-        return;
-    }
-    std::string token = auth.substr(7);
-    auto payload = getTokenContent(token);
-    if (!payload || payload->exp < std::chrono::system_clock::time_point()) {
-        std::cout << "time stuff";
-        callback(std::nullopt);
-        return;
-    }
-    auto db = getDbClient();
-    db->execSqlAsync(
-        R"sql(SELECT token_number FROM users WHERE login = $1)sql",
-        [payload, callback](const drogon::orm::Result &r) {
-            if (r.empty()) {
-                std::cout << "no such users";
-                callback(std::nullopt);
-                return;
-            }
-            int dbTokenNumber = r[0]["token_number"].as<int>();
-            if (dbTokenNumber != payload->token_number) {
-                std::cout << "wrong token_number";
-                callback(std::nullopt);
-                return;
-            }
-            callback(payload->login);
-        },
-        [callback](const drogon::orm::DrogonDbException &e) {
-            LOG_ERROR << e.base().what();
-            callback(std::nullopt);
-        },
-        payload->login
-    );
-}
 
 static void fetchPost(
     const std::string &postId,
@@ -268,15 +226,6 @@ static void saveImages(
                 sendInternalError(callback);
                 return;
             }
-            // try {
-            //     db->execSqlSync("INSERT INTO media (id_post, img) VALUES ($1,
-            //     $2)", postId, filePath); LOG_INFO << "Inserted into media:
-            //     postId=" << postId << ", path=" << filePath;
-            // } catch (const drogon::orm::DrogonDbException& e) {
-            //     LOG_ERROR << "DB insert error: " << e.base().what();
-            //     sendInternalError(callback);
-            //     return;
-            // }
             db->execSqlAsync(
                 "INSERT INTO media (id_post, img) VALUES ($1, $2)",
                 [callback, postJson](const drogon::orm::Result &) {
