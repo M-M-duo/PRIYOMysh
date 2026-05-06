@@ -2,16 +2,16 @@
 #include <crypt.h>
 #include <drogon/drogon.h>
 #include <drogon/orm/Exception.h>
+#include <drogon/utils/Utilities.h>
 #include <jwt-cpp/jwt.h>
+#include <chrono>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <optional>
+#include <random>
 #include <regex>
 #include <string>
-#include <fstream>
-#include <filesystem>
-#include <random>
-#include <chrono>
-#include <drogon/utils/Utilities.h>
 
 using namespace drogon;
 
@@ -150,16 +150,21 @@ inline bool validateImage(const std::string &image) {
     return image.length() <= 200;
 }
 
-inline std::string generateFilename(const std::string& extension = ".jpg") {
+inline std::string generateFilename(const std::string &extension = ".jpg") {
     auto now = std::chrono::system_clock::now();
-    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         now.time_since_epoch()
+    )
+                         .count();
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(100000, 999999);
-    return std::to_string(timestamp) + "_" + std::to_string(dis(gen)) + extension;
+    return std::to_string(timestamp) + "_" + std::to_string(dis(gen)) +
+           extension;
 }
 
-inline bool saveBase64(const std::string& base64Data, const std::string& filePath) {
+inline bool
+saveBase64(const std::string &base64Data, const std::string &filePath) {
     LOG_INFO << "saveBase64 started";
     std::string decoded = drogon::utils::base64Decode(base64Data);
     LOG_INFO << "decoded Base64";
@@ -177,7 +182,7 @@ inline bool saveBase64(const std::string& base64Data, const std::string& filePat
     return true;
 }
 
-inline std::string loadImageAsBase64(const std::string& filePath) {
+inline std::string loadImageAsBase64(const std::string &filePath) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file.is_open()) {
         LOG_ERROR << "Failed to open image file: " << filePath;

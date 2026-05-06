@@ -40,10 +40,23 @@ static void fetchPost(
             }
 
             if (author != currentLogin && !authorPublic) {
-                // здесь позже добавится проверка на то, является ли
-                // пользователь другом
-                callback(Json::Value(), 404);
-                return;
+                db->execSqlAsync(
+                    R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
+                                 AND id_friend = (SELECT id FROM users WHERE login = $2)sql",
+                    [callback, row, tags,
+                     author](const drogon::orm::Result &r) {
+                        if (r.empty()) {
+                            callback(Json::Value(), 404);
+                            return;
+                        }
+                    },
+                    [callback](const drogon::orm::DrogonDbException &e) {
+                        LOG_ERROR << e.base().what();
+                        callback(Json::Value(), 500);
+                        return;
+                    },
+                    author, currentLogin
+                );
             }
 
             Json::Value post;
@@ -230,14 +243,11 @@ static void saveImages(
                 "INSERT INTO media (id_post, img) VALUES ($1, $2)",
                 [callback, postJson](const drogon::orm::Result &) {
                     LOG_INFO << "Insert successful, sending response";
-                    auto resp =
-                        drogon::HttpResponse::newHttpJsonResponse(postJson);
-                    resp->setStatusCode(k200OK);
-                    callback(resp);
                 },
                 [callback](const drogon::orm::DrogonDbException &e) {
                     LOG_ERROR << "Insert error: " << e.base().what();
                     sendInternalError(callback);
+                    return;
                 },
                 postId, filePath
             );
@@ -310,14 +320,11 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
         }
 
         auto db = getDbClient();
-        auto now = trantor::Date::now();
-        std::string createdAt =
-            now.toCustomFormattedString("%Y-%m-%dT%H:%M:%S", true);
 
         db->execSqlAsync(
             R"sql(INSERT INTO posts (content, author, created_at) VALUES ($1, $2, 
-            $3) RETURNING id, id_uuid)sql",
-            [callback, tags, createdAt, login, content,
+            CURRENT_TIMESTAMP) RETURNING id, id_uuid, created_at)sql",
+            [callback, tags, login, content,
              imgArray](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     Json::Value ret;
@@ -329,6 +336,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                 }
                 int postId = r[0]["id"].as<int>();
                 std::string uuid = r[0]["id_uuid"].as<std::string>();
+                std::string createdAt = r[0]["created_at"].as<std::string>();
 
                 auto db2 = getDbClient();
                 for (const auto &tag : tags) {
@@ -364,7 +372,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                 resp->setStatusCode(k500InternalServerError);
                 callback(resp);
             },
-            content, login, createdAt
+            content, login
         );
     });
 }
@@ -467,13 +475,26 @@ void PostsController::userFeed(
                         return;
                     }
                     bool isPublic = r[0]["is_public"].as<bool>();
+
                     if (currentLogin != login && !isPublic) {
-                        // здесь потом добавить проверку на друзей
-                        sendForbidden(
-                            "You are not allowed to see this profile", callback
+                        db->execSqlAsync(
+                            R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
+                                    AND id_friend = (SELECT id FROM users WHERE login = $2))sql",
+                            [callback, currentLogin,
+                             login](const drogon::orm::Result &r) {
+                                if (r.empty()) {
+                                    sendForbidden(
+                                        "You are not allowed to see this "
+                                        "profile",
+                                        callback
+                                    );
+                                    return;
+                                }
+                            },
+                            sendDbErrorResponse(callback), login, currentLogin
                         );
-                        return;
                     }
+
                     db->execSqlAsync(
                         R"sql(
                         SELECT p.id_uuid, p.content, p.author, p.created_at,
@@ -509,8 +530,8 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
             return;
         }
 
-        // потом здесь надо сделать проверку на друзей, пока что лента состоит
-        // только из постов пользователей с публичным аккаунтом
+        std::string currentLogin = *loginOpt;
+
         auto db = getDbClient();
         db->execSqlAsync(
             R"sql(
@@ -518,13 +539,13 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
                        (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
                        (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                 FROM posts p
-                JOIN users u ON u.login = p.author
-                WHERE u.is_public = true
+                JOIN users u ON u.login = p.author 
+                WHERE u.is_public = true OR u.login = $3 OR EXISTS (SELECT 1 FROM friends f WHERE f.id_friend = (SELECT id from users WHERE login = $3) AND f.id_user = u.id)
                 ORDER BY p.created_at DESC
                 LIMIT $1 OFFSET $2
             )sql",
             sendPostsResponse(callback), sendDbErrorResponse(callback),
-            std::to_string(limit), std::to_string(offset)
+            std::to_string(limit), std::to_string(offset), currentLogin
         );
     });
 }

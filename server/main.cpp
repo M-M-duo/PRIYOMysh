@@ -50,7 +50,7 @@ void setupDatabase() {
                  id_uuid UUID DEFAULT uuid_generate_v4(), 
                  content VARCHAR(1000) NOT NULL, 
                  author VARCHAR(30) NOT NULL, 
-                 created_at TIMESTAMP WITHOUT TIME ZONE))sql",
+                 created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP))sql",
         [](const drogon::orm::Result &) { LOG_INFO << "posts table ready"; },
         [](const drogon::orm::DrogonDbException &e) {
             LOG_ERROR << e.base().what();
@@ -74,7 +74,9 @@ void setupDatabase() {
             id_post INTEGER REFERENCES posts(id) ON DELETE CASCADE, 
             img VARCHAR(200) NOT NULL))sql",
         [](const drogon::orm::Result &) { LOG_INFO << "media table ready"; },
-        [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); }
+        [](const drogon::orm::DrogonDbException &e) {
+            LOG_ERROR << e.base().what();
+        }
     );
 
     db->execSqlAsync(
@@ -88,7 +90,9 @@ void setupDatabase() {
             )
         )sql",
         [](const drogon::orm::Result &) { LOG_INFO << "friends table ready"; },
-        [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); }
+        [](const drogon::orm::DrogonDbException &e) {
+            LOG_ERROR << e.base().what();
+        }
     );
 }
 
