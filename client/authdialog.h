@@ -9,7 +9,6 @@ class AuthDialog : public QDialog {
     Q_OBJECT
 public:
     explicit AuthDialog(const QString &mode, QWidget *parent = nullptr);
-    QString getNickname() const;
     QString getLogin() const;
     QString getPassword() const;
     QString getEmail() const;
@@ -17,7 +16,6 @@ public:
     bool isPublic() const;
 
 private:
-    QLineEdit *nicknameEdit;
     QLineEdit *loginEdit;
     QLineEdit *passwordEdit;
     QLineEdit *emailEdit;
@@ -25,4 +23,4 @@ private:
     QCheckBox *isPublicCheckBox;
 };
 
-#endif // AUTHDIALOG_H
+#endif

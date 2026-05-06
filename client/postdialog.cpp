@@ -6,6 +6,9 @@
 #include <QImage>
 #include <QBuffer>
 #include <QRegularExpression>
+#include <QMessageBox>
+#include <QPixmap>
+#include <QEvent>
 
 PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
     setupUI();
@@ -20,15 +23,19 @@ void PostDialog::setupUI() {
     descriptionEdit->setMaximumHeight(100);
     layout->addWidget(descriptionEdit);
 
-    chooseImageButton = new QPushButton("Choose Image", this);
-    connect(chooseImageButton, &QPushButton::clicked, this, &PostDialog::chooseImage);
-    layout->addWidget(chooseImageButton);
-
-    imageLabel = new QLabel("No image selected", this);
-    imageLabel->setAlignment(Qt::AlignCenter);
-    imageLabel->setMinimumHeight(80);
-    imageLabel->setStyleSheet("border: 1px solid gray;");
-    layout->addWidget(imageLabel);
+    layout->addWidget(new QLabel("Images (max 10):"));
+    QHBoxLayout *imagesLayout = new QHBoxLayout();
+    for (int i = 0; i < 10; ++i) {
+        QLabel *slot = new QLabel(this);
+        slot->setFixedSize(60, 60);
+        slot->setStyleSheet("border: 1px solid gray; background-color: #f0f0f0;");
+        slot->setAlignment(Qt::AlignCenter);
+        slot->setScaledContents(true);
+        slot->installEventFilter(this);
+        imagesLayout->addWidget(slot);
+        imageSlots.append(slot);
+    }
+    layout->addLayout(imagesLayout);
 
     layout->addWidget(new QLabel("Tags (space separated):"));
     tagsEdit = new QLineEdit(this);
@@ -45,16 +52,32 @@ void PostDialog::setupUI() {
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 }
 
-void PostDialog::chooseImage() {
+bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
+    if (event->type() == QEvent::MouseButtonPress) {
+        int index = imageSlots.indexOf(static_cast<QLabel*>(obj));
+        if (index != -1) {
+            chooseImage(index);
+            return true;
+        }
+    }
+    return QDialog::eventFilter(obj, event);
+}
+
+void PostDialog::chooseImage(int index) {
     QString filePath = QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
     if (filePath.isEmpty()) return;
 
-    imageBase64 = cropAndToBase64(filePath);
-    if (imageBase64.isEmpty()) {
-        imageLabel->setText("Failed to load image");
+    QString base64 = cropAndToBase64(filePath);
+    if (base64.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Failed to load image");
         return;
     }
-    imageLabel->setText("Image loaded");
+    if (index < imagesBase64.size()) {
+        imagesBase64[index] = base64;
+    } else {
+        imagesBase64.append(base64);
+    }
+    updateImageSlot(index, base64);
 }
 
 QString PostDialog::cropAndToBase64(const QString &filePath) {
@@ -66,21 +89,39 @@ QString PostDialog::cropAndToBase64(const QString &filePath) {
     int y = (image.height() - size) / 2;
     QImage cropped = image.copy(x, y, size, size);
 
+    const int maxSize = 500;
+    if (cropped.width() > maxSize || cropped.height() > maxSize) {
+        cropped = cropped.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+
     QByteArray byteArray;
     QBuffer buffer(&byteArray);
     buffer.open(QIODevice::WriteOnly);
-    cropped.save(&buffer, "PNG");
+    cropped.save(&buffer, "JPEG", 70);
     buffer.close();
 
     return QString::fromLatin1(byteArray.toBase64());
+}
+
+void PostDialog::updateImageSlot(int index, const QString &base64) {
+    QLabel *slot = imageSlots[index];
+    if (!base64.isEmpty()) {
+        QPixmap pixmap;
+        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+        slot->setPixmap(pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        slot->setStyleSheet("border: 1px solid pink; background-color: pink;");
+    } else {
+        slot->clear();
+        slot->setStyleSheet("border: 1px solid gray; background-color: #f0f0f0;");
+    }
 }
 
 QString PostDialog::getDescription() const {
     return descriptionEdit->toPlainText();
 }
 
-QString PostDialog::getImageBase64() const {
-    return imageBase64;
+QStringList PostDialog::getImagesBase64() const {
+    return imagesBase64;
 }
 
 QStringList PostDialog::getTags() const {

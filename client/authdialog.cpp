@@ -11,10 +11,6 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent)
     QVBoxLayout *layout = new QVBoxLayout(this);
 
     if (mode == "register") {
-        layout->addWidget(new QLabel("Nickname:"));
-        nicknameEdit = new QLineEdit(this);
-        layout->addWidget(nicknameEdit);
-
         layout->addWidget(new QLabel("Email:"));
         emailEdit = new QLineEdit(this);
         layout->addWidget(emailEdit);
@@ -40,10 +36,6 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent)
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttonBox);
-}
-
-QString AuthDialog::getNickname() const {
-    return nicknameEdit ? nicknameEdit->text() : QString();
 }
 
 QString AuthDialog::getLogin() const {
