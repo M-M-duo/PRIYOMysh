@@ -516,6 +516,58 @@ void PostsController::userFeed(
     );
 }
 
+void PostsController::newsFriendsFeed(
+    const HttpRequestPtr &req,
+    Callback &&callback
+) {
+    verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
+        if (!loginOpt) {
+            sendUnauthorized(callback);
+            return;
+        }
+        auto [lim, off] = parseLimitOffset(req);
+        int limit = lim, offset = off;
+        if (limit < 0 || offset < 0) {
+            sendBadRequest("limit or offset is incorrect", callback);
+            return;
+        }
+
+        std::string currentLogin = *loginOpt;
+
+        auto db = getDbClient();
+        db->execSqlAsync(
+            R"sql(
+                WITH curr AS (
+                    SELECT id FROM users WHERE login = $3
+                )
+                SELECT p.id_uuid, p.content, p.author, p.created_at,
+                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
+                FROM posts p
+                JOIN users u ON u.login = p.author
+                WHERE u.login = $3
+                   OR (EXISTS (
+                           SELECT 1 FROM friends f
+                           WHERE f.id_friend = u.id
+                             AND f.id_user = (SELECT id FROM curr)
+                       )
+                       AND (u.is_public = true
+                            OR EXISTS (
+                                SELECT 1 FROM friends f
+                                WHERE f.id_friend = (SELECT id FROM curr)
+                                  AND f.id_user = u.id
+                            )
+                       )
+                   )
+                ORDER BY p.created_at DESC
+                LIMIT $1 OFFSET $2
+            )sql",
+            sendPostsResponse(callback), sendDbErrorResponse(callback),
+            std::to_string(limit), std::to_string(offset), currentLogin
+        );
+    });
+}
+
 void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
@@ -524,7 +576,6 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
         }
         auto [lim, off] = parseLimitOffset(req);
         int limit = lim, offset = off;
-
         if (limit < 0 || offset < 0) {
             sendBadRequest("limit or offset is incorrect", callback);
             return;
@@ -536,11 +587,17 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
         db->execSqlAsync(
             R"sql(
                 SELECT p.id_uuid, p.content, p.author, p.created_at,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
+                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
                        (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
                 FROM posts p
-                JOIN users u ON u.login = p.author 
-                WHERE u.is_public = true OR u.login = $3 OR EXISTS (SELECT 1 FROM friends f WHERE f.id_friend = (SELECT id from users WHERE login = $3) AND f.id_user = u.id)
+                JOIN users u ON u.login = p.author
+                WHERE u.is_public = true
+                   OR u.login = $3
+                   OR EXISTS (
+                       SELECT 1 FROM friends f
+                       WHERE f.id_user = u.id
+                         AND f.id_friend = (SELECT id FROM users WHERE login = $3)
+                   )
                 ORDER BY p.created_at DESC
                 LIMIT $1 OFFSET $2
             )sql",
