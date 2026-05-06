@@ -1,5 +1,6 @@
 #include "feedwindow.h"
 #include "postdialog.h"
+#include "friendfinder.h"
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QJsonDocument>
@@ -243,7 +244,7 @@ void FeedWindow::setupUI() {
     else
         setWindowTitle("Feed");
 
-    setFixedSize(450, 840);
+    setFixedSize(420, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
@@ -254,11 +255,14 @@ void FeedWindow::setupUI() {
     QHBoxLayout *topBar = new QHBoxLayout();
     if (currentUsername.isEmpty()) {
         createPostButton = new QPushButton("Create Post", this);
+        findFriendsButton = new QPushButton("Find Friends", this);
         profileButton = new QPushButton("👤 My Profile", this);
         topBar->addWidget(createPostButton);
+        topBar->addWidget(findFriendsButton);
         topBar->addStretch();
         topBar->addWidget(profileButton);
         connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
+        connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
         connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
     } else {
         QPushButton *backButton = new QPushButton("← Back to Feed", this);
@@ -384,6 +388,11 @@ void FeedWindow::onCreatePost() {
 void FeedWindow::onProfileClick() {
     FeedWindow *myPostsWindow = new FeedWindow(authToken, "me", this);
     myPostsWindow->show();
+}
+
+void FeedWindow::onFindFriendsClicked() {
+    FriendFinder dialog(authToken, this);
+    dialog.exec();
 }
 
 void FeedWindow::onAuthorClicked(const QString &author) {
