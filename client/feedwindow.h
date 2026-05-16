@@ -33,7 +33,8 @@ private slots:
     void onFindFriendsClicked();
     void onPostReplyFinished(QNetworkReply *reply);
     void onLoadPostsFinished(QNetworkReply *reply);
-    void onToggleFeedType();
+    void onToggleFeedShared();
+    void onToggleFeedFriends();
 
 private:
     QNetworkAccessManager *networkManager;
@@ -49,7 +50,8 @@ private:
     QPushButton *createPostButton;
     QPushButton *profileButton;
     QPushButton *findFriendsButton;
-    QPushButton *toggleFeedButton;
+    QPushButton *sharedButton;
+    QPushButton *friendsButton;
     QLabel *loadingLabel;
     QMap<QString, PostWidget*> m_postWidgets;
 
