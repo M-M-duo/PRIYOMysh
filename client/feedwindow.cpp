@@ -282,31 +282,6 @@ void FeedWindow::setupUI() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    QHBoxLayout *topBar = new QHBoxLayout();
-    if (currentUsername.isEmpty()) {
-        createPostButton = new QPushButton("➕", this);
-        findFriendsButton = new QPushButton("🔍", this);
-        profileButton = new QPushButton("👤", this);
-
-        createPostButton->setFixedSize(50, 40);
-        findFriendsButton->setFixedSize(50, 40);
-        profileButton->setFixedSize(50, 40);
-
-        topBar->addWidget(createPostButton);
-        topBar->addWidget(findFriendsButton);
-        topBar->addStretch();
-        topBar->addWidget(profileButton);
-        connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
-        connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
-        connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
-    } else {
-        QPushButton *backButton = new QPushButton("←", this);
-        backButton->setFixedSize(50, 40);
-        topBar->addWidget(backButton);
-        connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
-    }
-    mainLayout->addLayout(topBar);
-
     scrollArea = new QScrollArea(this);
     scrollWidget = new QWidget();
     postsLayout = new QVBoxLayout(scrollWidget);
@@ -328,28 +303,61 @@ void FeedWindow::setupUI() {
     mainLayout->addWidget(loadingLabel);
 
     QHBoxLayout *bottomBar = new QHBoxLayout();
-    bottomBar->setContentsMargins(10, 0, 10, 0);
+    bottomBar->setContentsMargins(10, 5, 10, 5);
     bottomBar->addStretch();
 
-    sharedButton = new QPushButton("Shared", this);
-    friendsButton = new QPushButton("Friends", this);
-    sharedButton->setFixedSize(100, 36);
-    friendsButton->setFixedSize(100, 36);
-    bottomBar->addWidget(sharedButton);
-    bottomBar->addSpacing(20);
-    bottomBar->addWidget(friendsButton);
-    bottomBar->addStretch();
+    if (currentUsername.isEmpty()) {
+        findFriendsButton = new QPushButton("🔍", this);
+        createPostButton = new QPushButton("➕", this);
+        profileButton = new QPushButton("👤", this);
+        sharedButton = new QPushButton("Shared", this);
+        friendsButton = new QPushButton("Friends", this);
+
+        findFriendsButton->setFixedSize(50, 40);
+        createPostButton->setFixedSize(50, 40);
+        profileButton->setFixedSize(50, 40);
+        sharedButton->setFixedSize(100, 36);
+        friendsButton->setFixedSize(100, 36);
+
+        bottomBar->addWidget(findFriendsButton);
+        bottomBar->addSpacing(10);
+        bottomBar->addWidget(sharedButton);
+        bottomBar->addSpacing(10);
+        bottomBar->addWidget(createPostButton);
+        bottomBar->addSpacing(10);
+        bottomBar->addWidget(friendsButton);
+        bottomBar->addSpacing(10);
+        bottomBar->addWidget(profileButton);
+        bottomBar->addStretch();
+
+        connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
+        connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
+        connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
+        connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
+        connect(friendsButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFriends);
+
+        sharedButton->setCheckable(true);
+        friendsButton->setCheckable(true);
+        sharedButton->setChecked(!friendsFeed);
+        friendsButton->setChecked(friendsFeed);
+    } else {
+        QPushButton *backButton = new QPushButton("← Back", this);
+        backButton->setFixedSize(100, 40);
+        bottomBar->addWidget(backButton);
+        bottomBar->addStretch();
+        connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
+    }
 
     QWidget *bottomWidget = new QWidget(this);
     bottomWidget->setLayout(bottomBar);
-    bottomWidget->setFixedHeight(50);
+    bottomWidget->setFixedHeight(55);
     mainLayout->addWidget(bottomWidget);
 
     setCentralWidget(central);
 
-    QString topButtonStyle = R"(
+    QString transparentButtonStyle = R"(
         QPushButton {
-            background-color: rgba(200, 200, 200, 0.6);
+            background-color: transparent;
             border: none;
             border-radius: 18px;
             font-size: 20px;
@@ -357,14 +365,14 @@ void FeedWindow::setupUI() {
             color: #333;
         }
         QPushButton:hover {
-            background-color: rgba(180, 180, 180, 0.8);
+            background-color: rgba(0, 0, 0, 0.05);
         }
         QPushButton:pressed {
-            background-color: rgba(160, 160, 160, 0.9);
+            background-color: rgba(0, 0, 0, 0.1);
         }
     )";
 
-    QString bottomButtonStyle = R"(
+    QString solidButtonStyle = R"(
         QPushButton {
             background-color: rgba(200, 200, 200, 0.6);
             border: none;
@@ -382,24 +390,19 @@ void FeedWindow::setupUI() {
         }
     )";
 
-    createPostButton->setStyleSheet(topButtonStyle);
-    findFriendsButton->setStyleSheet(topButtonStyle);
-    profileButton->setStyleSheet(topButtonStyle);
-    if (!currentUsername.isEmpty()) {
-        QPushButton *backButton = qobject_cast<QPushButton*>(topBar->itemAt(0)->widget());
-        if (backButton) backButton->setStyleSheet(topButtonStyle);
+    if (currentUsername.isEmpty()) {
+        findFriendsButton->setStyleSheet(transparentButtonStyle);
+        createPostButton->setStyleSheet(transparentButtonStyle);
+        profileButton->setStyleSheet(transparentButtonStyle);
+        sharedButton->setStyleSheet(solidButtonStyle);
+        friendsButton->setStyleSheet(solidButtonStyle);
+    } else {
+        QPushButton *backButton = qobject_cast<QPushButton*>(bottomBar->itemAt(0)->widget());
+        if (backButton) backButton->setStyleSheet(solidButtonStyle);
     }
-    sharedButton->setStyleSheet(bottomButtonStyle);
-    friendsButton->setStyleSheet(bottomButtonStyle);
 
-    sharedButton->setCheckable(true);
-    friendsButton->setCheckable(true);
-    sharedButton->setChecked(!friendsFeed);
-    friendsButton->setChecked(friendsFeed);
-
+  
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
-    connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
-    connect(friendsButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFriends);
 }
 
 void FeedWindow::clearPosts() {
