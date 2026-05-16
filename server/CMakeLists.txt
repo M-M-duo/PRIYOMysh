@@ -35,6 +35,7 @@ endif()
 add_executable(drogon_app
     main.cpp
     controllers/AuthController.cpp
+    controllers/FriendsController.cpp
     controllers/PostsController.cpp
 )
 

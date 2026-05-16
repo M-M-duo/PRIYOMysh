@@ -1,6 +1,6 @@
-#include "AuthController.h"
+#include "AuthController.hpp"
 #include <drogon/utils/Utilities.h>
-#include "helpers.h"
+#include "helpers.hpp"
 
 using namespace drogon;
 

@@ -10,6 +10,7 @@ public:
         ADD_METHOD_TO(PostsController::myFeed, "/api/posts/feed/my", drogon::Get);
         ADD_METHOD_TO(PostsController::userFeed, "/api/posts/feed/{login}", drogon::Get);
         ADD_METHOD_TO(PostsController::newsFeed, "/api/posts/feed", drogon::Get);
+        ADD_METHOD_TO(PostsController::newsFriendsFeed, "/api/posts/feed/friends", drogon::Get);
     METHOD_LIST_END
 
     void newPost(const drogon::HttpRequestPtr& req,
@@ -23,5 +24,7 @@ public:
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                 std::string login);
     void newsFeed(const drogon::HttpRequestPtr& req,
+                std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+    void newsFriendsFeed(const drogon::HttpRequestPtr& req,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 };
