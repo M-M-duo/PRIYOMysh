@@ -161,8 +161,14 @@ public:
 
         QHBoxLayout *actionLayout = new QHBoxLayout();
         actionLayout->setAlignment(Qt::AlignCenter);
-        likeButton = new QPushButton("🧀 Cheese", this);
-        dislikeButton = new QPushButton("🪤 Mousetrap", this);
+        likeButton = new QPushButton("🧀", this);
+        likeButton->setFixedSize(40, 40);
+        likeCount = post["likesCount"].toInt();
+        likeButton->setText("🧀 " + QString::number(likeCount));
+        dislikeButton = new QPushButton("🪤", this);
+        dislikeButton->setFixedSize(40, 40);
+        dislikeCount = post["dislikesCount"].toInt();
+        dislikeButton->setText("🪤 " + QString::number(dislikeCount));
         actionLayout->addWidget(likeButton);
         actionLayout->addWidget(dislikeButton);
         contentLayout->addLayout(actionLayout);
@@ -188,6 +194,10 @@ public:
     }
 
     void updateReactions(int likes, int dislikes) {
+        likeCount = likes;
+        dislikeCount = dislikes;
+        likeButton->setText("🧀 " + QString::number(likeCount));
+        dislikeButton->setText("🪤 " + QString::number(dislikeCount));
         likesLabel->setText("🧀 " + QString::number(likes));
         dislikesLabel->setText("🪤 " + QString::number(dislikes));
     }
@@ -252,6 +262,8 @@ protected:
     QPushButton *nextButton;
     QPushButton *likeButton;
     QPushButton *dislikeButton;
+    int likeCount;
+    int dislikeCount;
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
