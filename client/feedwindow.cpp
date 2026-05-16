@@ -321,29 +321,37 @@ void FeedWindow::setupUI() {
     loadingLabel->setVisible(false);
     mainLayout->addWidget(loadingLabel);
 
+    // Нижняя панель – кнопки симметрично по центру
     QHBoxLayout *bottomBar = new QHBoxLayout();
-    bottomBar->setContentsMargins(0, 0, 0, 0);
-    bottomBar->setSpacing(0);
+    bottomBar->setContentsMargins(10, 0, 10, 0);
+    bottomBar->addStretch();
+
     sharedButton = new QPushButton("Shared", this);
     friendsButton = new QPushButton("Friends", this);
+
+    // Одинаковый размер и стиль для обеих кнопок
+    sharedButton->setFixedSize(100, 36);
+    friendsButton->setFixedSize(100, 36);
     bottomBar->addWidget(sharedButton);
-    bottomBar->addStretch();
+    bottomBar->addSpacing(20);
     bottomBar->addWidget(friendsButton);
+    bottomBar->addStretch();
+
     QWidget *bottomWidget = new QWidget(this);
     bottomWidget->setLayout(bottomBar);
-    bottomWidget->setFixedHeight(40);
+    bottomWidget->setFixedHeight(50);
     mainLayout->addWidget(bottomWidget);
 
     setCentralWidget(central);
 
-    // Современный стиль кнопок
+    // Современный стиль для верхних кнопок
     QString topButtonStyle = R"(
         QPushButton {
             background-color: transparent;
             border: none;
             border-radius: 20px;
             padding: 8px;
-            font-size: 18px;
+            font-size: 5px;
             color: #333;
         }
         QPushButton:hover {
@@ -354,23 +362,22 @@ void FeedWindow::setupUI() {
         }
     )";
 
+    // Стиль для нижних кнопок – круглые, полупрозрачные
     QString bottomButtonStyle = R"(
         QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 6px 16px;
+            background-color: rgba(200, 200, 200, 0.6);
+            border: none;
+            border-radius: 18px;
             font-size: 14px;
             font-weight: 500;
             color: #333;
         }
         QPushButton:hover {
-            background-color: #e0e0e0;
+            background-color: rgba(180, 180, 180, 0.8);
         }
         QPushButton:checked {
-            background-color: #007bff;
+            background-color: rgba(0, 123, 255, 0.7);
             color: white;
-            border-color: #007bff;
         }
     )";
 
@@ -379,6 +386,7 @@ void FeedWindow::setupUI() {
     profileButton->setStyleSheet(topButtonStyle);
     sharedButton->setStyleSheet(bottomButtonStyle);
     friendsButton->setStyleSheet(bottomButtonStyle);
+
     sharedButton->setCheckable(true);
     friendsButton->setCheckable(true);
     sharedButton->setChecked(!friendsFeed);
