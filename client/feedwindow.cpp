@@ -151,14 +151,6 @@ public:
         dateLabel->setAlignment(Qt::AlignCenter);
         contentLayout->addWidget(dateLabel);
 
-        QHBoxLayout *likesLayout = new QHBoxLayout();
-        likesLayout->setAlignment(Qt::AlignCenter);
-        likesLabel = new QLabel("🧀 " + QString::number(post["likesCount"].toInt()));
-        dislikesLabel = new QLabel("🪤 " + QString::number(post["dislikesCount"].toInt()));
-        likesLayout->addWidget(likesLabel);
-        likesLayout->addWidget(dislikesLabel);
-        contentLayout->addLayout(likesLayout);
-
         QHBoxLayout *actionLayout = new QHBoxLayout();
         actionLayout->setAlignment(Qt::AlignCenter);
         likeButton = new QPushButton("🧀", this);
@@ -198,8 +190,6 @@ public:
         dislikeCount = dislikes;
         likeButton->setText("🧀 " + QString::number(likeCount));
         dislikeButton->setText("🪤 " + QString::number(dislikeCount));
-        likesLabel->setText("🧀 " + QString::number(likes));
-        dislikesLabel->setText("🪤 " + QString::number(dislikes));
     }
 
 private slots:
@@ -256,8 +246,6 @@ protected:
     QLabel *contentLabel;
     QLabel *tagsLabel;
     QLabel *dateLabel;
-    QLabel *likesLabel;
-    QLabel *dislikesLabel;
     QPushButton *prevButton;
     QPushButton *nextButton;
     QPushButton *likeButton;
@@ -291,24 +279,23 @@ void FeedWindow::setupUI() {
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
 
     QHBoxLayout *topBar = new QHBoxLayout();
     if (currentUsername.isEmpty()) {
-        createPostButton = new QPushButton("Create Post", this);
-        findFriendsButton = new QPushButton("🔍 Find Friends", this);
-        toggleFeedButton = new QPushButton("All", this);
-        profileButton = new QPushButton("👤 My Profile", this);
+        createPostButton = new QPushButton("➕", this);
+        findFriendsButton = new QPushButton("🔍", this);
+        profileButton = new QPushButton("👤", this);
         topBar->addWidget(createPostButton);
         topBar->addWidget(findFriendsButton);
-        topBar->addWidget(toggleFeedButton);
         topBar->addStretch();
         topBar->addWidget(profileButton);
         connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
         connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
-        connect(toggleFeedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedType);
         connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
     } else {
-        QPushButton *backButton = new QPushButton("← Back to Feed", this);
+        QPushButton *backButton = new QPushButton("←", this);
         topBar->addWidget(backButton);
         connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
     }
@@ -334,9 +321,24 @@ void FeedWindow::setupUI() {
     loadingLabel->setVisible(false);
     mainLayout->addWidget(loadingLabel);
 
+    QHBoxLayout *bottomBar = new QHBoxLayout();
+    bottomBar->setContentsMargins(0, 0, 0, 0);
+    bottomBar->setSpacing(0);
+    sharedButton = new QPushButton("Shared", this);
+    friendsButton = new QPushButton("Friends", this);
+    bottomBar->addWidget(sharedButton);
+    bottomBar->addStretch();
+    bottomBar->addWidget(friendsButton);
+    QWidget *bottomWidget = new QWidget(this);
+    bottomWidget->setLayout(bottomBar);
+    bottomWidget->setFixedHeight(40);
+    mainLayout->addWidget(bottomWidget);
+
     setCentralWidget(central);
 
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
+    connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
+    connect(friendsButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFriends);
 }
 
 void FeedWindow::clearPosts() {
@@ -366,7 +368,7 @@ void FeedWindow::loadPosts(bool append) {
         endpoint = QString("http://127.0.0.1:8080/api/posts/feed/%1?limit=%2&offset=%3").arg(currentUsername).arg(limit).arg(currentOffset);
     } else {
         if (friendsFeed) {
-            endpoint = QString("http://127.0.0.1:8080/api/posts/friends?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+            endpoint = QString("http://127.0.0.1:8080/api/posts/feed/friends?limit=%1&offset=%2").arg(limit).arg(currentOffset);
         } else {
             endpoint = QString("http://127.0.0.1:8080/api/posts/feed?limit=%1&offset=%2").arg(limit).arg(currentOffset);
         }
@@ -506,9 +508,13 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
     reply->deleteLater();
 }
 
-void FeedWindow::onToggleFeedType() {
-    friendsFeed = !friendsFeed;
-    toggleFeedButton->setText(friendsFeed ? "Friends" : "All");
+void FeedWindow::onToggleFeedShared() {
+    friendsFeed = false;
+    loadPosts(false);
+}
+
+void FeedWindow::onToggleFeedFriends() {
+    friendsFeed = true;
     loadPosts(false);
 }
 
