@@ -287,6 +287,11 @@ void FeedWindow::setupUI() {
         createPostButton = new QPushButton("➕", this);
         findFriendsButton = new QPushButton("🔍", this);
         profileButton = new QPushButton("👤", this);
+
+        createPostButton->setFixedSize(50, 40);
+        findFriendsButton->setFixedSize(50, 40);
+        profileButton->setFixedSize(50, 40);
+
         topBar->addWidget(createPostButton);
         topBar->addWidget(findFriendsButton);
         topBar->addStretch();
@@ -296,6 +301,7 @@ void FeedWindow::setupUI() {
         connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
     } else {
         QPushButton *backButton = new QPushButton("←", this);
+        backButton->setFixedSize(50, 40);
         topBar->addWidget(backButton);
         connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
     }
@@ -321,15 +327,12 @@ void FeedWindow::setupUI() {
     loadingLabel->setVisible(false);
     mainLayout->addWidget(loadingLabel);
 
-    // Нижняя панель – кнопки симметрично по центру
     QHBoxLayout *bottomBar = new QHBoxLayout();
     bottomBar->setContentsMargins(10, 0, 10, 0);
     bottomBar->addStretch();
 
     sharedButton = new QPushButton("Shared", this);
     friendsButton = new QPushButton("Friends", this);
-
-    // Одинаковый размер и стиль для обеих кнопок
     sharedButton->setFixedSize(100, 36);
     friendsButton->setFixedSize(100, 36);
     bottomBar->addWidget(sharedButton);
@@ -344,25 +347,23 @@ void FeedWindow::setupUI() {
 
     setCentralWidget(central);
 
-    // Современный стиль для верхних кнопок
     QString topButtonStyle = R"(
         QPushButton {
-            background-color: transparent;
+            background-color: rgba(200, 200, 200, 0.6);
             border: none;
-            border-radius: 20px;
-            padding: 8px;
-            font-size: 5px;
+            border-radius: 18px;
+            font-size: 20px;
+            font-weight: 500;
             color: #333;
         }
         QPushButton:hover {
-            background-color: rgba(0, 0, 0, 0.05);
+            background-color: rgba(180, 180, 180, 0.8);
         }
         QPushButton:pressed {
-            background-color: rgba(0, 0, 0, 0.1);
+            background-color: rgba(160, 160, 160, 0.9);
         }
     )";
 
-    // Стиль для нижних кнопок – круглые, полупрозрачные
     QString bottomButtonStyle = R"(
         QPushButton {
             background-color: rgba(200, 200, 200, 0.6);
@@ -384,6 +385,10 @@ void FeedWindow::setupUI() {
     createPostButton->setStyleSheet(topButtonStyle);
     findFriendsButton->setStyleSheet(topButtonStyle);
     profileButton->setStyleSheet(topButtonStyle);
+    if (!currentUsername.isEmpty()) {
+        QPushButton *backButton = qobject_cast<QPushButton*>(topBar->widget(0));
+        if (backButton) backButton->setStyleSheet(topButtonStyle);
+    }
     sharedButton->setStyleSheet(bottomButtonStyle);
     friendsButton->setStyleSheet(bottomButtonStyle);
 

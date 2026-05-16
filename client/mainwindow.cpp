@@ -51,14 +51,42 @@ MainWindow::MainWindow(QWidget *parent)
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(central);
+    layout->addStretch();
+
     QPushButton *loginBtn = new QPushButton("Login", this);
     QPushButton *registerBtn = new QPushButton("Register", this);
-    layout->addWidget(loginBtn);
-    layout->addWidget(registerBtn);
+
+    loginBtn->setFixedSize(200, 40);
+    registerBtn->setFixedSize(200, 40);
+
+    layout->addWidget(loginBtn, 0, Qt::AlignCenter);
+    layout->addSpacing(20);
+    layout->addWidget(registerBtn, 0, Qt::AlignCenter);
+    layout->addStretch();
+
     setCentralWidget(central);
 
     connect(loginBtn, &QPushButton::clicked, this, &MainWindow::onSignInClicked);
     connect(registerBtn, &QPushButton::clicked, this, &MainWindow::onRegisterClicked);
+
+    QString buttonStyle = R"(
+        QPushButton {
+            background-color: rgba(200, 200, 200, 0.6);
+            border: none;
+            border-radius: 18px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        QPushButton:hover {
+            background-color: rgba(180, 180, 180, 0.8);
+        }
+        QPushButton:pressed {
+            background-color: rgba(160, 160, 160, 0.9);
+        }
+    )";
+    loginBtn->setStyleSheet(buttonStyle);
+    registerBtn->setStyleSheet(buttonStyle);
 }
 
 MainWindow::~MainWindow() {}
