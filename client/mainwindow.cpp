@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QLabel>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
@@ -48,32 +49,50 @@ MainWindow::MainWindow(QWidget *parent)
 {
     networkManager = new QNetworkAccessManager(this);
     setWindowTitle("Authentication");
-    setFixedSize(360, 160);
+    setFixedSize(400, 700);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QWidget *central = new QWidget(this);
-    QVBoxLayout *layout = new QVBoxLayout(central);
-    layout->addStretch();
+    QVBoxLayout *mainLayout = new QVBoxLayout(central);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
 
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
+    QWidget *topWidget = new QWidget(this);
+    topWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QVBoxLayout *topLayout = new QVBoxLayout(topWidget);
+    topLayout->setAlignment(Qt::AlignCenter);
+    QLabel *logoLabel = new QLabel(this);
+    QPixmap logoPixmap(":/sources/enter_logo.png");
+    if (!logoPixmap.isNull()) {
+        QPixmap scaledLogo = logoPixmap.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        logoLabel->setPixmap(scaledLogo);
+    } else {
+        logoLabel->setText("Logo");
+    }
+    logoLabel->setAlignment(Qt::AlignCenter);
+    topLayout->addWidget(logoLabel);
+    mainLayout->addWidget(topWidget, 1); 
+
+    QWidget *bottomWidget = new QWidget(this);
+    QVBoxLayout *bottomLayout = new QVBoxLayout(bottomWidget);
+    bottomLayout->setContentsMargins(15, 0, 15, 10);
+    bottomLayout->setSpacing(10);
 
     QPushButton *loginBtn = new QPushButton("Login", this);
     QPushButton *registerBtn = new QPushButton("Register", this);
 
-    loginBtn->setFixedSize(100, 36);
-    registerBtn->setFixedSize(100, 36);
+    loginBtn->setFixedHeight(48);
+    registerBtn->setFixedHeight(48);
+    loginBtn->setFixedWidth(370);
+    registerBtn->setFixedWidth(370);
 
-    buttonLayout->addWidget(loginBtn);
-    buttonLayout->addSpacing(20);
-    buttonLayout->addWidget(registerBtn);
-    buttonLayout->addStretch();
+    bottomLayout->addStretch();
+    bottomLayout->addWidget(loginBtn);
+    bottomLayout->addWidget(registerBtn);
 
-    layout->addLayout(buttonLayout);
-    layout->addStretch();
-
+    mainLayout->addWidget(bottomWidget);
     setCentralWidget(central);
 
     connect(loginBtn, &QPushButton::clicked, this, &MainWindow::onSignInClicked);
@@ -84,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
             background-color: rgba(200, 200, 200, 0.6);
             border: none;
             border-radius: 18px;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 500;
             color: #333;
         }

@@ -151,16 +151,17 @@ public:
         dateLabel->setAlignment(Qt::AlignCenter);
         contentLayout->addWidget(dateLabel);
 
+        // Кнопки реакций – без фона, без границ
         QHBoxLayout *actionLayout = new QHBoxLayout();
         actionLayout->setAlignment(Qt::AlignCenter);
-        likeButton = new QPushButton("🧀", this);
-        likeButton->setFixedSize(40, 40);
+        likeButton = new QPushButton(this);
+        dislikeButton = new QPushButton(this);
         likeCount = post["likesCount"].toInt();
-        likeButton->setText("🧀 " + QString::number(likeCount));
-        dislikeButton = new QPushButton("🪤", this);
-        dislikeButton->setFixedSize(40, 40);
         dislikeCount = post["dislikesCount"].toInt();
-        dislikeButton->setText("🪤 " + QString::number(dislikeCount));
+        likeButton->setText(QString("🧀 %1").arg(likeCount));
+        dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
+        likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; }");
+        dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; }");
         actionLayout->addWidget(likeButton);
         actionLayout->addWidget(dislikeButton);
         contentLayout->addLayout(actionLayout);
@@ -188,8 +189,8 @@ public:
     void updateReactions(int likes, int dislikes) {
         likeCount = likes;
         dislikeCount = dislikes;
-        likeButton->setText("🧀 " + QString::number(likeCount));
-        dislikeButton->setText("🪤 " + QString::number(dislikeCount));
+        likeButton->setText(QString("🧀 %1").arg(likeCount));
+        dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
     }
 
 private slots:
@@ -401,7 +402,6 @@ void FeedWindow::setupUI() {
         if (backButton) backButton->setStyleSheet(solidButtonStyle);
     }
 
-  
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
 }
 

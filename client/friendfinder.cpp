@@ -69,7 +69,7 @@ void FriendFinder::searchUser() {
         return;
     }
     currentSearchLogin = login;
-    QUrl url(QString("http://127.0.0.1:8080/api/friends/search?login=%1").arg(login));
+    QUrl url(QString("http://127.0.0.1:8080/api/friends/search/%1").arg(login));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
