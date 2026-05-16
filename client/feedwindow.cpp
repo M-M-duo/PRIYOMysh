@@ -336,6 +336,54 @@ void FeedWindow::setupUI() {
 
     setCentralWidget(central);
 
+    // Современный стиль кнопок
+    QString topButtonStyle = R"(
+        QPushButton {
+            background-color: transparent;
+            border: none;
+            border-radius: 20px;
+            padding: 8px;
+            font-size: 18px;
+            color: #333;
+        }
+        QPushButton:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        QPushButton:pressed {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+    )";
+
+    QString bottomButtonStyle = R"(
+        QPushButton {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        QPushButton:hover {
+            background-color: #e0e0e0;
+        }
+        QPushButton:checked {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+    )";
+
+    createPostButton->setStyleSheet(topButtonStyle);
+    findFriendsButton->setStyleSheet(topButtonStyle);
+    profileButton->setStyleSheet(topButtonStyle);
+    sharedButton->setStyleSheet(bottomButtonStyle);
+    friendsButton->setStyleSheet(bottomButtonStyle);
+    sharedButton->setCheckable(true);
+    friendsButton->setCheckable(true);
+    sharedButton->setChecked(!friendsFeed);
+    friendsButton->setChecked(friendsFeed);
+
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
     connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
     connect(friendsButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFriends);
@@ -510,11 +558,15 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
 
 void FeedWindow::onToggleFeedShared() {
     friendsFeed = false;
+    sharedButton->setChecked(true);
+    friendsButton->setChecked(false);
     loadPosts(false);
 }
 
 void FeedWindow::onToggleFeedFriends() {
     friendsFeed = true;
+    sharedButton->setChecked(false);
+    friendsButton->setChecked(true);
     loadPosts(false);
 }
 
