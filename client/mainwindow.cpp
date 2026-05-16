@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QPixmap>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
@@ -47,21 +48,30 @@ MainWindow::MainWindow(QWidget *parent)
 {
     networkManager = new QNetworkAccessManager(this);
     setWindowTitle("Authentication");
-    resize(400, 300);
+    setFixedSize(360, 160);
+    setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
+    setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(central);
     layout->addStretch();
 
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addStretch();
+
     QPushButton *loginBtn = new QPushButton("Login", this);
     QPushButton *registerBtn = new QPushButton("Register", this);
 
-    loginBtn->setFixedSize(200, 40);
-    registerBtn->setFixedSize(200, 40);
+    loginBtn->setFixedSize(100, 36);
+    registerBtn->setFixedSize(100, 36);
 
-    layout->addWidget(loginBtn, 0, Qt::AlignCenter);
-    layout->addSpacing(20);
-    layout->addWidget(registerBtn, 0, Qt::AlignCenter);
+    buttonLayout->addWidget(loginBtn);
+    buttonLayout->addSpacing(20);
+    buttonLayout->addWidget(registerBtn);
+    buttonLayout->addStretch();
+
+    layout->addLayout(buttonLayout);
     layout->addStretch();
 
     setCentralWidget(central);
@@ -74,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
             background-color: rgba(200, 200, 200, 0.6);
             border: none;
             border-radius: 18px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             color: #333;
         }
