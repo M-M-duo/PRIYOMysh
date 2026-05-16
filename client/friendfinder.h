@@ -36,7 +36,6 @@ private:
 
     void setupUI();
     void showError(const QString &message);
-    void showInfo(const QString &message);
 };
 
 #endif

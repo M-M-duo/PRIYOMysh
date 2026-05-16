@@ -16,10 +16,12 @@ add_executable(ping_monitor
     authdialog.cpp
     postdialog.cpp
     feedwindow.cpp
+    friendfinder.cpp
     mainwindow.h
     authdialog.h
     postdialog.h
     feedwindow.h
+    friendfinder.h
     resources.qrc
 )
 

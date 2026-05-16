@@ -9,6 +9,8 @@
 #include <QJsonDocument>
 #include <QDebug>
 #include <QPixmap>
+#include <QVBoxLayout>
+#include <QPushButton>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);

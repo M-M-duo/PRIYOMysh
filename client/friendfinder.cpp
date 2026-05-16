@@ -75,7 +75,9 @@ void FriendFinder::searchUser() {
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, this, &FriendFinder::onSearchFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onSearchFinished(reply);
+    });
 }
 
 void FriendFinder::onSearchFinished(QNetworkReply *reply) {
@@ -128,7 +130,9 @@ void FriendFinder::followUser() {
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, this, &FriendFinder::onFollowFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onFollowFinished(reply);
+    });
 }
 
 void FriendFinder::onFollowFinished(QNetworkReply *reply) {
@@ -162,7 +166,9 @@ void FriendFinder::unfollowUser() {
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, this, &FriendFinder::onUnfollowFinished);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onUnfollowFinished(reply);
+    });
 }
 
 void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {

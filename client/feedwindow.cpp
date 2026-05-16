@@ -17,6 +17,9 @@
 #include <QPushButton>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonValue>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
@@ -177,10 +180,10 @@ public:
         author = post["author"].toString();
 
         connect(likeButton, &QPushButton::clicked, [this]() {
-            feedWindow->onLikeDislike(postId, true);
+            if (feedWindow) feedWindow->onLikeDislike(postId, true);
         });
         connect(dislikeButton, &QPushButton::clicked, [this]() {
-            feedWindow->onLikeDislike(postId, false);
+            if (feedWindow) feedWindow->onLikeDislike(postId, false);
         });
     }
 

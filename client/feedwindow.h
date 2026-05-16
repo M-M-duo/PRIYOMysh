@@ -12,6 +12,9 @@
 #include <QVBoxLayout>
 #include <QMap>
 
+class FriendFinder;
+class PostWidget;
+
 class FeedWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -20,6 +23,7 @@ public:
 
 public slots:
     void onAuthorClicked(const QString &author);
+    void onLikeDislike(const QString &postId, bool isLike);
 
 private slots:
     void loadPosts(bool append = false);
@@ -30,7 +34,6 @@ private slots:
     void onPostReplyFinished(QNetworkReply *reply);
     void onLoadPostsFinished(QNetworkReply *reply);
     void onToggleFeedType();
-    void onLikeDislike(const QString &postId, bool isLike);
 
 private:
     QNetworkAccessManager *networkManager;
@@ -48,7 +51,7 @@ private:
     QPushButton *findFriendsButton;
     QPushButton *toggleFeedButton;
     QLabel *loadingLabel;
-    QMap<QString, class PostWidget*> m_postWidgets;
+    QMap<QString, PostWidget*> m_postWidgets;
 
     void setupUI();
     void clearPosts();
