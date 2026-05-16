@@ -386,7 +386,7 @@ void FeedWindow::setupUI() {
     findFriendsButton->setStyleSheet(topButtonStyle);
     profileButton->setStyleSheet(topButtonStyle);
     if (!currentUsername.isEmpty()) {
-        QPushButton *backButton = qobject_cast<QPushButton*>(topBar->widget(0));
+        QPushButton *backButton = qobject_cast<QPushButton*>(topBar->itemAt(0)->widget());
         if (backButton) backButton->setStyleSheet(topButtonStyle);
     }
     sharedButton->setStyleSheet(bottomButtonStyle);
