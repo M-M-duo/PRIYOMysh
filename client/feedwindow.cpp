@@ -66,6 +66,8 @@ public:
         contentLayout->setAlignment(Qt::AlignCenter);
         contentWidget->setFixedWidth(420);
 
+        postId = post["id"].toString();
+
         authorLabel = new QLabel(post["author"].toString());
         authorLabel->setStyleSheet("font-weight: bold; color: #007bff; text-decoration: underline;");
         authorLabel->setCursor(Qt::PointingHandCursor);
@@ -148,11 +150,19 @@ public:
 
         QHBoxLayout *likesLayout = new QHBoxLayout();
         likesLayout->setAlignment(Qt::AlignCenter);
-        likesLabel = new QLabel("👍 " + QString::number(post["likesCount"].toInt()));
-        dislikesLabel = new QLabel("👎 " + QString::number(post["dislikesCount"].toInt()));
+        likesLabel = new QLabel("🧀 " + QString::number(post["likesCount"].toInt()));
+        dislikesLabel = new QLabel("🪤 " + QString::number(post["dislikesCount"].toInt()));
         likesLayout->addWidget(likesLabel);
         likesLayout->addWidget(dislikesLabel);
         contentLayout->addLayout(likesLayout);
+
+        QHBoxLayout *actionLayout = new QHBoxLayout();
+        actionLayout->setAlignment(Qt::AlignCenter);
+        likeButton = new QPushButton("🧀 Cheese", this);
+        dislikeButton = new QPushButton("🪤 Mousetrap", this);
+        actionLayout->addWidget(likeButton);
+        actionLayout->addWidget(dislikeButton);
+        contentLayout->addLayout(actionLayout);
 
         centerLayout->addWidget(contentWidget);
         centerLayout->addStretch();
@@ -165,6 +175,18 @@ public:
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         author = post["author"].toString();
+
+        connect(likeButton, &QPushButton::clicked, [this]() {
+            feedWindow->onLikeDislike(postId, true);
+        });
+        connect(dislikeButton, &QPushButton::clicked, [this]() {
+            feedWindow->onLikeDislike(postId, false);
+        });
+    }
+
+    void updateReactions(int likes, int dislikes) {
+        likesLabel->setText("🧀 " + QString::number(likes));
+        dislikesLabel->setText("🪤 " + QString::number(dislikes));
     }
 
 private slots:
@@ -212,6 +234,7 @@ protected:
     }
 
     QString author;
+    QString postId;
     FeedWindow *feedWindow;
     QLabel *authorLabel;
     QStringList images;
@@ -224,10 +247,12 @@ protected:
     QLabel *dislikesLabel;
     QPushButton *prevButton;
     QPushButton *nextButton;
+    QPushButton *likeButton;
+    QPushButton *dislikeButton;
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
-    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10)
+    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10), friendsFeed(false)
 {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
@@ -255,14 +280,17 @@ void FeedWindow::setupUI() {
     QHBoxLayout *topBar = new QHBoxLayout();
     if (currentUsername.isEmpty()) {
         createPostButton = new QPushButton("Create Post", this);
-        findFriendsButton = new QPushButton("Find Friends", this);
+        findFriendsButton = new QPushButton("🔍 Find Friends", this);
+        toggleFeedButton = new QPushButton("All", this);
         profileButton = new QPushButton("👤 My Profile", this);
         topBar->addWidget(createPostButton);
         topBar->addWidget(findFriendsButton);
+        topBar->addWidget(toggleFeedButton);
         topBar->addStretch();
         topBar->addWidget(profileButton);
         connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
         connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
+        connect(toggleFeedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedType);
         connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
     } else {
         QPushButton *backButton = new QPushButton("← Back to Feed", this);
@@ -307,12 +335,14 @@ void FeedWindow::clearPosts() {
 void FeedWindow::addPost(const QJsonObject &post) {
     PostWidget *widget = new PostWidget(post, this);
     postsLayout->addWidget(widget);
+    m_postWidgets[post["id"].toString()] = widget;
 }
 
 void FeedWindow::loadPosts(bool append) {
     if (!append) {
         currentOffset = 0;
         clearPosts();
+        m_postWidgets.clear();
     }
     QString endpoint;
     if (currentUsername == "me") {
@@ -320,7 +350,11 @@ void FeedWindow::loadPosts(bool append) {
     } else if (!currentUsername.isEmpty() && currentUsername != "me") {
         endpoint = QString("http://127.0.0.1:8080/api/posts/feed/%1?limit=%2&offset=%3").arg(currentUsername).arg(limit).arg(currentOffset);
     } else {
-        endpoint = QString("http://127.0.0.1:8080/api/posts/feed?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+        if (friendsFeed) {
+            endpoint = QString("http://127.0.0.1:8080/api/posts/friends?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+        } else {
+            endpoint = QString("http://127.0.0.1:8080/api/posts/feed?limit=%1&offset=%2").arg(limit).arg(currentOffset);
+        }
     }
     QUrl url(endpoint);
     QNetworkRequest request(url);
@@ -455,6 +489,43 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
         loadMoreButton->setVisible(false);
     }
     reply->deleteLater();
+}
+
+void FeedWindow::onToggleFeedType() {
+    friendsFeed = !friendsFeed;
+    toggleFeedButton->setText(friendsFeed ? "Friends" : "All");
+    loadPosts(false);
+}
+
+void FeedWindow::onLikeDislike(const QString &postId, bool isLike) {
+    QString endpoint = isLike ? QString("http://127.0.0.1:8080/api/posts/%1/like").arg(postId)
+                              : QString("http://127.0.0.1:8080/api/posts/%1/dislike").arg(postId);
+    QUrl url(endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QNetworkReply *reply = networkManager->post(request, QByteArray());
+    connect(reply, &QNetworkReply::finished, [this, reply, postId]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray response = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(response);
+            if (doc.isObject()) {
+                int likes = doc.object()["likesCount"].toInt();
+                int dislikes = doc.object()["dislikesCount"].toInt();
+                updatePostReaction(postId, likes, dislikes);
+            }
+        } else {
+            qDebug() << "Reaction error:" << reply->errorString();
+        }
+        reply->deleteLater();
+    });
+}
+
+void FeedWindow::updatePostReaction(const QString &postId, int newLikes, int newDislikes) {
+    if (m_postWidgets.contains(postId)) {
+        m_postWidgets[postId]->updateReactions(newLikes, newDislikes);
+    }
 }
 
 void FeedWindow::showError(const QString &message) {

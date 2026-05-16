@@ -69,7 +69,7 @@ void FriendFinder::searchUser() {
         return;
     }
     currentSearchLogin = login;
-    QUrl url(QString("http://127.0.0.1:8080/api/users/search?login=%1").arg(login));
+    QUrl url(QString("http://127.0.0.1:8080/api/friends/search?login=%1").arg(login));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -86,16 +86,15 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
             QString nickname = obj["nickname"].toString();
-            bool followed = obj["followed"].toBool(); // сервер должен возвращать, подписан ли текущий пользователь
-            bool mutual = obj["mutual"].toBool();     // взаимная подписка
+            bool isFriend = obj["isFriend"].toBool();
+            bool mutual = obj["mutual"].toBool();
             resultLabel->setText(QString("User: %1 (%2)").arg(login).arg(nickname));
-            statusLabel->setText(mutual ? "You are friends" : (followed ? "You follow" : "Not followed"));
-            isFollowing = followed;
-            actionButton->setText(followed ? "Unfollow" : "Follow");
+            statusLabel->setText(mutual ? "You are friends" : (isFriend ? "Friend request sent" : "Not friend"));
+            isFollowing = isFriend;
+            actionButton->setText(isFriend ? "Remove friend" : "Add friend");
             actionButton->setVisible(true);
-            // отключаем старое соединение, подключаем нужный слот
             disconnect(actionButton, &QPushButton::clicked, this, nullptr);
-            if (followed) {
+            if (isFriend) {
                 connect(actionButton, &QPushButton::clicked, this, &FriendFinder::unfollowUser);
             } else {
                 connect(actionButton, &QPushButton::clicked, this, &FriendFinder::followUser);
@@ -119,7 +118,7 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
 }
 
 void FriendFinder::followUser() {
-    QUrl url("http://127.0.0.1:8080/api/users/follow");
+    QUrl url("http://127.0.0.1:8080/api/friends/add");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -134,11 +133,10 @@ void FriendFinder::followUser() {
 
 void FriendFinder::onFollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        showCustomInfo(this, "You are now following " + currentSearchLogin);
-        // Обновляем статус
+        showCustomInfo(this, "Friend request sent to " + currentSearchLogin);
         isFollowing = true;
-        statusLabel->setText("You follow");
-        actionButton->setText("Unfollow");
+        statusLabel->setText("Friend request sent");
+        actionButton->setText("Remove friend");
         disconnect(actionButton, &QPushButton::clicked, this, nullptr);
         connect(actionButton, &QPushButton::clicked, this, &FriendFinder::unfollowUser);
     } else {
@@ -148,13 +146,13 @@ void FriendFinder::onFollowFinished(QNetworkReply *reply) {
         if (doc.isObject() && doc.object().contains("reason")) {
             errorMsg = doc.object()["reason"].toString();
         }
-        showCustomError(this, "Follow failed: " + errorMsg);
+        showCustomError(this, "Add friend failed: " + errorMsg);
     }
     reply->deleteLater();
 }
 
 void FriendFinder::unfollowUser() {
-    QUrl url("http://127.0.0.1:8080/api/users/unfollow");
+    QUrl url("http://127.0.0.1:8080/api/friends/remove");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -169,10 +167,10 @@ void FriendFinder::unfollowUser() {
 
 void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        showCustomInfo(this, "You unfollowed " + currentSearchLogin);
+        showCustomInfo(this, "Friend removed: " + currentSearchLogin);
         isFollowing = false;
-        statusLabel->setText("Not followed");
-        actionButton->setText("Follow");
+        statusLabel->setText("Not friend");
+        actionButton->setText("Add friend");
         disconnect(actionButton, &QPushButton::clicked, this, nullptr);
         connect(actionButton, &QPushButton::clicked, this, &FriendFinder::followUser);
     } else {
@@ -182,15 +180,11 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
         if (doc.isObject() && doc.object().contains("reason")) {
             errorMsg = doc.object()["reason"].toString();
         }
-        showCustomError(this, "Unfollow failed: " + errorMsg);
+        showCustomError(this, "Remove friend failed: " + errorMsg);
     }
     reply->deleteLater();
 }
 
 void FriendFinder::showError(const QString &message) {
     showCustomError(this, message);
-}
-
-void FriendFinder::showInfo(const QString &message) {
-    showCustomInfo(this, message);
 }
