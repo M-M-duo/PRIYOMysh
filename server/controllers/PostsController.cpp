@@ -151,57 +151,6 @@ static auto sendPostsResponse(Callback callback) {
     };
 }
 
-static auto sendDbErrorResponse(Callback callback) {
-    return [callback](const drogon::orm::DrogonDbException &e) {
-        LOG_ERROR << e.base().what();
-        Json::Value ret;
-        ret["reason"] = "Internal error";
-        auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-        resp->setStatusCode(k500InternalServerError);
-        callback(resp);
-    };
-}
-
-static void sendUnauthorized(Callback callback) {
-    Json::Value ret;
-    ret["reason"] = "Token is incorrect";
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k401Unauthorized);
-    callback(resp);
-}
-
-static void sendBadRequest(const std::string &reason, Callback callback) {
-    Json::Value ret;
-    ret["reason"] = reason;
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k400BadRequest);
-    callback(resp);
-}
-
-static void sendNotFound(const std::string &reason, Callback callback) {
-    Json::Value ret;
-    ret["reason"] = reason;
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k404NotFound);
-    callback(resp);
-}
-
-static void sendForbidden(const std::string &reason, Callback callback) {
-    Json::Value ret;
-    ret["reason"] = reason;
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k403Forbidden);
-    callback(resp);
-}
-
-static void sendInternalError(Callback callback) {
-    Json::Value ret;
-    ret["reason"] = "Internal error";
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k500InternalServerError);
-    callback(resp);
-}
-
 static void saveImages(
     int postId,
     const Json::Value &imgArray,

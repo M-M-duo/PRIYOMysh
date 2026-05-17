@@ -9,49 +9,6 @@
 
 using namespace drogon;
 
-static auto sendDbErrorResponse(Callback callback) {
-    return [callback](const drogon::orm::DrogonDbException &e) {
-        LOG_ERROR << e.base().what();
-        Json::Value ret;
-        ret["reason"] = "Internal error";
-        auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-        resp->setStatusCode(k500InternalServerError);
-        callback(resp);
-    };
-}
-
-static void sendUnauthorized(Callback callback) {
-    Json::Value ret;
-    ret["reason"] = "Token is incorrect";
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k401Unauthorized);
-    callback(resp);
-}
-
-static void sendBadRequest(const std::string &reason, Callback callback) {
-    Json::Value ret;
-    ret["reason"] = reason;
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k400BadRequest);
-    callback(resp);
-}
-
-static void sendNotFound(const std::string &reason, Callback callback) {
-    Json::Value ret;
-    ret["reason"] = reason;
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k404NotFound);
-    callback(resp);
-}
-
-static void sendInternalError(Callback callback) {
-    Json::Value ret;
-    ret["reason"] = "Internal error";
-    auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
-    resp->setStatusCode(k500InternalServerError);
-    callback(resp);
-}
-
 static std::pair<int, int> parseLimitOffset(const drogon::HttpRequestPtr &req) {
     int limit = 5;
     auto limitParam = req->getParameter("limit");
