@@ -1,10 +1,4 @@
-### Client ver 0.0.1
-
-#### Available functions
-- Auto-ping server
-- Manual server request
-- Monitoring server's  json responses
-
+### Client ver 0.0.5
 
 
 ### How to start it up (on Ubuntu):
@@ -19,13 +13,6 @@ cd client
 3. Start setup for dependencies
 ```
 chmod +x install_deps.sh && ./install_deps.sh
-```
-After setting up you should have installed next (for Debian/Ubuntu):
-```
-1.libqt6core6
-2.libqt6widgets6
-3.libqt6network6
-4.libgl1-mesa-glx
 ```
 4. Give permission for run-file and start it:
 ```bash
