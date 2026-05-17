@@ -31,6 +31,7 @@ private slots:
     void onCreatePost();
     void onProfileClick();
     void onFindFriendsClicked();
+    void onFriendsListClicked();
     void onPostReplyFinished(QNetworkReply *reply);
     void onLoadPostsFinished(QNetworkReply *reply);
     void onToggleFeedShared();
@@ -50,6 +51,7 @@ private:
     QPushButton *createPostButton;
     QPushButton *profileButton;
     QPushButton *findFriendsButton;
+    QPushButton *friendsListButton;
     QPushButton *sharedButton;
     QPushButton *friendsButton;
     QLabel *loadingLabel;

@@ -151,7 +151,6 @@ public:
         dateLabel->setAlignment(Qt::AlignCenter);
         contentLayout->addWidget(dateLabel);
 
-        // Кнопки реакций – без фона, без границ
         QHBoxLayout *actionLayout = new QHBoxLayout();
         actionLayout->setAlignment(Qt::AlignCenter);
         likeButton = new QPushButton(this);
@@ -160,8 +159,8 @@ public:
         dislikeCount = post["dislikesCount"].toInt();
         likeButton->setText(QString("🧀 %1").arg(likeCount));
         dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
-        likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; }");
-        dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; }");
+        likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+        dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
         actionLayout->addWidget(likeButton);
         actionLayout->addWidget(dislikeButton);
         contentLayout->addLayout(actionLayout);
@@ -295,6 +294,7 @@ void FeedWindow::setupUI() {
     mainLayout->addWidget(scrollArea);
 
     loadMoreButton = new QPushButton("Load more", this);
+    loadMoreButton->setFixedHeight(48);
     loadMoreButton->setVisible(false);
     mainLayout->addWidget(loadMoreButton);
 
@@ -314,11 +314,11 @@ void FeedWindow::setupUI() {
         sharedButton = new QPushButton("Shared", this);
         friendsButton = new QPushButton("Friends", this);
 
-        findFriendsButton->setFixedSize(50, 40);
-        createPostButton->setFixedSize(50, 40);
-        profileButton->setFixedSize(50, 40);
-        sharedButton->setFixedSize(100, 36);
-        friendsButton->setFixedSize(100, 36);
+        findFriendsButton->setFixedSize(50, 48);
+        createPostButton->setFixedSize(50, 48);
+        profileButton->setFixedSize(50, 48);
+        sharedButton->setFixedSize(100, 44);
+        friendsButton->setFixedSize(100, 44);
 
         bottomBar->addWidget(findFriendsButton);
         bottomBar->addSpacing(10);
@@ -341,9 +341,20 @@ void FeedWindow::setupUI() {
         friendsButton->setCheckable(true);
         sharedButton->setChecked(!friendsFeed);
         friendsButton->setChecked(friendsFeed);
+    } else if (currentUsername == "me") {
+        QPushButton *backButton = new QPushButton("← Back", this);
+        backButton->setFixedSize(100, 48);
+        bottomBar->addWidget(backButton);
+        bottomBar->addSpacing(10);
+        friendsListButton = new QPushButton("Friends", this);
+        friendsListButton->setFixedSize(100, 48);
+        bottomBar->addWidget(friendsListButton);
+        bottomBar->addStretch();
+        connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
+        connect(friendsListButton, &QPushButton::clicked, this, &FeedWindow::onFriendsListClicked);
     } else {
         QPushButton *backButton = new QPushButton("← Back", this);
-        backButton->setFixedSize(100, 40);
+        backButton->setFixedSize(100, 48);
         bottomBar->addWidget(backButton);
         bottomBar->addStretch();
         connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
@@ -351,7 +362,7 @@ void FeedWindow::setupUI() {
 
     QWidget *bottomWidget = new QWidget(this);
     bottomWidget->setLayout(bottomBar);
-    bottomWidget->setFixedHeight(55);
+    bottomWidget->setFixedHeight(60);
     mainLayout->addWidget(bottomWidget);
 
     setCentralWidget(central);
@@ -400,6 +411,9 @@ void FeedWindow::setupUI() {
     } else {
         QPushButton *backButton = qobject_cast<QPushButton*>(bottomBar->itemAt(0)->widget());
         if (backButton) backButton->setStyleSheet(solidButtonStyle);
+        if (currentUsername == "me" && friendsListButton) {
+            friendsListButton->setStyleSheet(solidButtonStyle);
+        }
     }
 
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
@@ -508,6 +522,10 @@ void FeedWindow::onProfileClick() {
 void FeedWindow::onFindFriendsClicked() {
     FriendFinder dialog(authToken, this);
     dialog.exec();
+}
+
+void FeedWindow::onFriendsListClicked() {
+    QMessageBox::information(this, "Friends", "Friends list will be shown here (endpoint to be added)");
 }
 
 void FeedWindow::onAuthorClicked(const QString &author) {
