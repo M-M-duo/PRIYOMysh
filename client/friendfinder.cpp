@@ -41,7 +41,7 @@ void FriendFinder::setupUI() {
 
     QHBoxLayout *searchLayout = new QHBoxLayout();
     searchEdit = new QLineEdit(this);
-    searchEdit->setPlaceholderText("Enter nickname...");
+    searchEdit->setPlaceholderText("Enter login...");
     searchButton = new QPushButton("Search", this);
     searchLayout->addWidget(searchEdit);
     searchLayout->addWidget(searchButton);
@@ -76,7 +76,7 @@ void FriendFinder::clearResult() {
 void FriendFinder::searchUser() {
     QString login = searchEdit->text().trimmed();
     if (login.isEmpty()) {
-        showCustomError(this, "Enter nickname");
+        showCustomError(this, "Enter login");
         return;
     }
     clearResult();
@@ -99,14 +99,12 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
-            QString nickname = obj["nickname"].toString();
             bool isFriend = obj["isFriend"].toBool();
             bool mutual = obj["mutual"].toBool();
             currentSearchLogin = login;
-            currentSearchNickname = nickname;
             isFollowing = isFriend;
             isMutual = mutual;
-            resultLabel->setText(QString("%1 (%2)").arg(login).arg(nickname));
+            resultLabel->setText(login);
             statusLabel->setText(mutual ? "You are friends" : (isFriend ? "Friend request sent" : ""));
             actionButton->setText(isFriend ? "Unfollow" : "Follow");
             resultWidget->setVisible(true);

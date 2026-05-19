@@ -27,7 +27,6 @@ private:
     QNetworkAccessManager *networkManager;
     QString authToken;
     QString currentSearchLogin;
-    QString currentSearchNickname;
     bool isFollowing;
     bool isMutual;
 

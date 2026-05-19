@@ -255,22 +255,31 @@ protected:
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
-    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10), friendsFeed(false)
+    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10), friendsFeed(false), isOwnProfile(false)
 {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
+    if (!username.isEmpty() && username != "me") {
+        loadProfileInfo();
+    } else if (username == "me") {
+        loadProfileInfo();
+    }
     loadPosts(false);
 }
 
 FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
-    if (currentUsername == "me")
-        setWindowTitle("My Posts");
-    else if (!currentUsername.isEmpty() && currentUsername != "me")
-        setWindowTitle("Posts of " + currentUsername);
-    else
+    if (currentUsername == "me") {
+        setWindowTitle("My Profile");
+        isOwnProfile = true;
+    } else if (!currentUsername.isEmpty() && currentUsername != "me") {
+        setWindowTitle("Profile: " + currentUsername);
+        isOwnProfile = false;
+    } else {
         setWindowTitle("Feed");
+        isOwnProfile = false;
+    }
 
     setFixedSize(420, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
@@ -281,6 +290,26 @@ void FeedWindow::setupUI() {
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
+
+    profileHeader = new QWidget(this);
+    QVBoxLayout *headerLayout = new QVBoxLayout(profileHeader);
+    headerLayout->setAlignment(Qt::AlignCenter);
+    profileLoginLabel = new QLabel("", this);
+    profileEmailLabel = new QLabel("", this);
+    profilePhoneLabel = new QLabel("", this);
+    followersLabel = new QLabel("", this);
+    followingLabel = new QLabel("", this);
+    followProfileButton = new QPushButton("", this);
+    followProfileButton->setFixedSize(100, 36);
+    followProfileButton->setVisible(false);
+    headerLayout->addWidget(profileLoginLabel);
+    headerLayout->addWidget(profileEmailLabel);
+    headerLayout->addWidget(profilePhoneLabel);
+    headerLayout->addWidget(followersLabel);
+    headerLayout->addWidget(followingLabel);
+    headerLayout->addWidget(followProfileButton);
+    profileHeader->setVisible(false);
+    mainLayout->addWidget(profileHeader);
 
     scrollArea = new QScrollArea(this);
     scrollWidget = new QWidget();
@@ -417,6 +446,112 @@ void FeedWindow::setupUI() {
     }
 
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
+}
+
+void FeedWindow::loadProfileInfo() {
+    QString endpoint;
+    if (currentUsername == "me") {
+        endpoint = "http://127.0.0.1:8080/api/users/me";
+    } else {
+        endpoint = QString("http://127.0.0.1:8080/api/users/%1").arg(currentUsername);
+    }
+    QUrl url(endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QNetworkReply *reply = networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onProfileInfoFinished(reply);
+    });
+}
+
+void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray response = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject()) {
+            QJsonObject user = doc.object();
+            profileLogin = user["login"].toString();
+            updateProfileHeader(user);
+            profileHeader->setVisible(true);
+            if (!isOwnProfile) {
+                followProfileButton->setVisible(true);
+                bool isFriend = user["isFriend"].toBool();
+                followProfileButton->setText(isFriend ? "Unfollow" : "Follow");
+                disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
+                if (isFriend) {
+                    connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onUnfollowFromProfile);
+                } else {
+                    connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onFollowFromProfile);
+                }
+            }
+        }
+    } else {
+        showCustomError(this, "Failed to load profile");
+    }
+    reply->deleteLater();
+}
+
+void FeedWindow::updateProfileHeader(const QJsonObject &user) {
+    profileLoginLabel->setText(QString("Login: %1").arg(user["login"].toString()));
+    profileEmailLabel->setText(QString("Email: %1").arg(user["email"].toString()));
+    profilePhoneLabel->setText(QString("Phone: %1").arg(user["phone"].toString()));
+    followersLabel->setText(QString("Followers: %1").arg(user["followersCount"].toInt()));
+    followingLabel->setText(QString("Following: %1").arg(user["followingCount"].toInt()));
+    profileLoginLabel->setStyleSheet("font-weight: bold; font-size: 16px;");
+    profileEmailLabel->setStyleSheet("color: #666;");
+    profilePhoneLabel->setStyleSheet("color: #666;");
+    followersLabel->setStyleSheet("color: #888;");
+    followingLabel->setStyleSheet("color: #888;");
+}
+
+void FeedWindow::onFollowFromProfile() {
+    QUrl url("http://127.0.0.1:8080/api/friends/add");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QJsonObject json;
+    json["login"] = currentUsername;
+    QByteArray data = QJsonDocument(json).toJson();
+
+    QNetworkReply *reply = networkManager->post(request, data);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            showCustomInfo(this, "Followed " + currentUsername);
+            followProfileButton->setText("Unfollow");
+            disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
+            connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onUnfollowFromProfile);
+        } else {
+            showCustomError(this, "Failed to follow");
+        }
+        reply->deleteLater();
+    });
+}
+
+void FeedWindow::onUnfollowFromProfile() {
+    QUrl url("http://127.0.0.1:8080/api/friends/remove");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QJsonObject json;
+    json["login"] = currentUsername;
+    QByteArray data = QJsonDocument(json).toJson();
+
+    QNetworkReply *reply = networkManager->post(request, data);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            showCustomInfo(this, "Unfollowed " + currentUsername);
+            followProfileButton->setText("Follow");
+            disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
+            connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onFollowFromProfile);
+        } else {
+            showCustomError(this, "Failed to unfollow");
+        }
+        reply->deleteLater();
+    });
 }
 
 void FeedWindow::clearPosts() {
