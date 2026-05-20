@@ -1,25 +1,35 @@
 #include "friendfinder.h"
 #include "feedwindow.h"
 #include <QDebug>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QNetworkRequest>
+#include <QScreen>
 #include <QUrl>
 #include <QVBoxLayout>
 
 static void showCustomError(QWidget *parent, const QString &text) {
   QMessageBox msgBox(parent);
   msgBox.setIcon(QMessageBox::Critical);
+  msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
 static void showCustomInfo(QWidget *parent, const QString &text) {
   QMessageBox msgBox(parent);
   msgBox.setIcon(QMessageBox::Information);
+  msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -32,7 +42,7 @@ FriendFinder::FriendFinder(const QString &token, QWidget *parent)
 FriendFinder::~FriendFinder() {}
 
 void FriendFinder::setupUI() {
-  setWindowTitle("Find Friends");
+  setWindowTitle("PRIYOMYSH");
   resize(400, 200);
   setModal(true);
 
@@ -50,10 +60,10 @@ void FriendFinder::setupUI() {
   QHBoxLayout *resultLayout = new QHBoxLayout(resultWidget);
   resultLayout->setContentsMargins(0, 0, 0, 0);
   resultLabel = new QLabel("", this);
-  viewPostsButton = new QPushButton("View posts", this);
+  viewProfileButton = new QPushButton("View profile", this);
   actionButton = new QPushButton("", this);
   resultLayout->addWidget(resultLabel);
-  resultLayout->addWidget(viewPostsButton);
+  resultLayout->addWidget(viewProfileButton);
   resultLayout->addWidget(actionButton);
   resultWidget->setVisible(false);
   layout->addWidget(resultWidget);
@@ -63,8 +73,8 @@ void FriendFinder::setupUI() {
   layout->addWidget(statusLabel);
 
   connect(searchButton, &QPushButton::clicked, this, &FriendFinder::searchUser);
-  connect(viewPostsButton, &QPushButton::clicked, this,
-          &FriendFinder::onViewPosts);
+  connect(viewProfileButton, &QPushButton::clicked, this,
+          &FriendFinder::onViewProfile);
   connect(actionButton, &QPushButton::clicked, this, &FriendFinder::followUser);
 }
 
@@ -81,8 +91,7 @@ void FriendFinder::searchUser() {
   }
   clearResult();
   currentSearchLogin = login;
-  QUrl url(
-      QString("http://127.0.0.1:8080/api/friends/search?login=%1").arg(login));
+  QUrl url(QString("http://127.0.0.1:8080/api/friends/search/%1").arg(login));
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
   request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -208,9 +217,10 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
   reply->deleteLater();
 }
 
-void FriendFinder::onViewPosts() {
-  FeedWindow *userFeed = new FeedWindow(authToken, currentSearchLogin, this);
+void FriendFinder::onViewProfile() {
+  FeedWindow *userFeed = new FeedWindow(authToken, currentSearchLogin);
   userFeed->show();
+  close();
 }
 
 void FriendFinder::showError(const QString &message) {

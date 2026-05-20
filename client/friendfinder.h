@@ -21,7 +21,7 @@ private slots:
   void onSearchFinished(QNetworkReply *reply);
   void onFollowFinished(QNetworkReply *reply);
   void onUnfollowFinished(QNetworkReply *reply);
-  void onViewPosts();
+  void onViewProfile();
 
 private:
   QNetworkAccessManager *networkManager;
@@ -34,7 +34,7 @@ private:
   QPushButton *searchButton;
   QWidget *resultWidget;
   QLabel *resultLabel;
-  QPushButton *viewPostsButton;
+  QPushButton *viewProfileButton;
   QPushButton *actionButton;
   QLabel *statusLabel;
 

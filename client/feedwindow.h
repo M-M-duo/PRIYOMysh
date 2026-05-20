@@ -32,11 +32,11 @@ private slots:
   void onCreatePost();
   void onProfileClick();
   void onFindFriendsClicked();
-  void onFriendsListClicked();
+  void onExitProfile();
   void onPostReplyFinished(QNetworkReply *reply);
   void onLoadPostsFinished(QNetworkReply *reply);
   void onToggleFeedShared();
-  void onToggleFeedFriends();
+  void onToggleFeedFollow();
   void onProfileInfoFinished(QNetworkReply *reply);
   void onFollowFromProfile();
   void onUnfollowFromProfile();
@@ -45,10 +45,9 @@ private:
   QNetworkAccessManager *networkManager;
   QString authToken;
   QString currentUsername;
-  QString profileLogin;
   int currentOffset;
   int limit;
-  bool friendsFeed;
+  bool followFeed;
   bool isOwnProfile;
   QScrollArea *scrollArea;
   QWidget *scrollWidget;
@@ -57,19 +56,17 @@ private:
   QPushButton *createPostButton;
   QPushButton *profileButton;
   QPushButton *findFriendsButton;
-  QPushButton *friendsListButton;
+  QPushButton *exitProfileButton;
   QPushButton *sharedButton;
-  QPushButton *friendsButton;
+  QPushButton *followButton;
   QLabel *loadingLabel;
   QMap<QString, PostWidget *> m_postWidgets;
 
   QWidget *profileHeader;
-  QLabel *profileNameLabel;
   QLabel *profileLoginLabel;
-  QLabel *profileEmailLabel;
-  QLabel *profilePhoneLabel;
-  QLabel *followersLabel;
-  QLabel *followingLabel;
+  QLabel *profileFollowersLabel;
+  QLabel *profileFollowingLabel;
+  QLabel *profilePostsLabel;
   QPushButton *followProfileButton;
 
   void setupUI();
@@ -78,7 +75,8 @@ private:
   void showError(const QString &message);
   void updatePostReaction(const QString &postId, int newLikes, int newDislikes);
   void loadProfileInfo();
-  void updateProfileHeader(const QJsonObject &user);
+  void updateProfileHeader(const QJsonObject &profile);
+  void showNoPostsImage();
 };
 
 #endif

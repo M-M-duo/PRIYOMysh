@@ -32,7 +32,6 @@ private:
                        const QString &email, const QString &phone,
                        bool isPrivate, const QString &mode);
   void sendSignInRequest(const QString &login, const QString &password);
-  void showErrorForField(const QString &field, const QString &message);
 };
 
 #endif

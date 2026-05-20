@@ -2,6 +2,7 @@
 #include "authdialog.h"
 #include "feedwindow.h"
 #include <QDebug>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -11,6 +12,7 @@
 #include <QNetworkRequest>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScreen>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -22,6 +24,9 @@ static void showCustomWarning(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -33,6 +38,9 @@ static void showCustomError(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -44,6 +52,9 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -51,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), currentDialog(nullptr) {
   networkManager = new QNetworkAccessManager(this);
   setWindowTitle("PRIYOMYSH");
-  setFixedSize(420, 840);
+  setFixedSize(440, 840);
   move(0, 0);
   setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
   setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
@@ -89,8 +100,8 @@ MainWindow::MainWindow(QWidget *parent)
 
   loginBtn->setFixedHeight(48);
   registerBtn->setFixedHeight(48);
-  loginBtn->setFixedWidth(390);
-  registerBtn->setFixedWidth(390);
+  loginBtn->setFixedWidth(410);
+  registerBtn->setFixedWidth(410);
 
   bottomLayout->addStretch();
   bottomLayout->addWidget(loginBtn);
@@ -206,21 +217,6 @@ void MainWindow::sendSignInRequest(const QString &login,
           [this, reply]() { onAuthReplyFinished(reply); });
 }
 
-void MainWindow::showErrorForField(const QString &field,
-                                   const QString &message) {
-  if (currentDialog) {
-    AuthDialog *dialog = qobject_cast<AuthDialog *>(currentDialog);
-    if (dialog) {
-      dialog->clearField(field);
-      showCustomError(dialog, message);
-    } else {
-      showCustomError(this, message);
-    }
-  } else {
-    showCustomError(this, message);
-  }
-}
-
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
   if (reply->error() == QNetworkReply::NoError) {
     QByteArray response = reply->readAll();
@@ -253,33 +249,12 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
     QByteArray response = reply->readAll();
     QString errorMsg = reply->errorString();
     QJsonDocument doc = QJsonDocument::fromJson(response);
-    QString fieldToClear;
-    if (doc.isObject()) {
-      QJsonObject obj = doc.object();
-      if (obj.contains("reason")) {
-        errorMsg = obj["reason"].toString();
-        QString reason = errorMsg.toLower();
-        if (reason.contains("login"))
-          fieldToClear = "login";
-        else if (reason.contains("password"))
-          fieldToClear = "password";
-        else if (reason.contains("email"))
-          fieldToClear = "email";
-        else if (reason.contains("phone"))
-          fieldToClear = "phone";
-      }
+    if (doc.isObject() && doc.object().contains("reason")) {
+      errorMsg = doc.object()["reason"].toString();
     }
     qDebug().noquote() << "===server error=> " << errorMsg;
     if (currentDialog) {
-      AuthDialog *dialog = qobject_cast<AuthDialog *>(currentDialog);
-      if (dialog) {
-        if (!fieldToClear.isEmpty()) {
-          dialog->clearField(fieldToClear);
-        }
-        showCustomError(dialog, errorMsg);
-      } else {
-        showCustomError(this, errorMsg);
-      }
+      showCustomError(currentDialog, errorMsg);
     } else {
       showCustomError(this, errorMsg);
     }

@@ -22,6 +22,9 @@ signals:
                        const QString &email, const QString &phone,
                        bool isPrivate);
 
+protected:
+  bool eventFilter(QObject *obj, QEvent *event) override;
+
 private slots:
   void onButtonClicked();
 

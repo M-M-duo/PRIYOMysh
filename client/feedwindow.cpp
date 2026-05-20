@@ -1,5 +1,6 @@
 #include "feedwindow.h"
 #include "friendfinder.h"
+#include "mainwindow.h"
 #include "postdialog.h"
 #include <QDateTime>
 #include <QDebug>
@@ -29,6 +30,9 @@ static void showCustomWarning(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -40,6 +44,9 @@ static void showCustomError(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -51,6 +58,9 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
   msgBox.setIconPixmap(scaled);
   msgBox.setWindowTitle("PRIYOMYSH");
   msgBox.setText(text);
+  QScreen *screen = QGuiApplication::primaryScreen();
+  int screenHeight = screen->availableGeometry().height();
+  msgBox.move(170, (screenHeight - msgBox.height()) / 2);
   msgBox.exec();
 }
 
@@ -71,7 +81,7 @@ public:
     QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setSpacing(5);
     contentLayout->setAlignment(Qt::AlignCenter);
-    contentWidget->setFixedWidth(420);
+    contentWidget->setFixedWidth(440);
 
     postId = post["id"].toString();
 
@@ -183,7 +193,7 @@ public:
     QFrame *line = new QFrame(this);
     line->setFrameShape(QFrame::HLine);
     line->setFrameShadow(QFrame::Sunken);
-    line->setFixedWidth(420);
+    line->setFixedWidth(440);
     mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
     author = post["author"].toString();
@@ -272,7 +282,7 @@ protected:
 FeedWindow::FeedWindow(const QString &token, const QString &username,
                        QWidget *parent)
     : QMainWindow(parent), authToken(token), currentUsername(username),
-      currentOffset(0), limit(10), friendsFeed(false), isOwnProfile(false) {
+      currentOffset(0), limit(10), followFeed(false), isOwnProfile(false) {
   networkManager = new QNetworkAccessManager(this);
   setupUI();
   if (!username.isEmpty() && username != "me") {
@@ -287,7 +297,7 @@ FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
   setWindowTitle("PRIYOMYSH");
-  setFixedSize(420, 840);
+  setFixedSize(440, 840);
   setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
   setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
   setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
@@ -309,18 +319,16 @@ void FeedWindow::setupUI() {
   QVBoxLayout *headerLayout = new QVBoxLayout(profileHeader);
   headerLayout->setAlignment(Qt::AlignCenter);
   profileLoginLabel = new QLabel("", this);
-  profileEmailLabel = new QLabel("", this);
-  profilePhoneLabel = new QLabel("", this);
-  followersLabel = new QLabel("", this);
-  followingLabel = new QLabel("", this);
+  profileFollowersLabel = new QLabel("", this);
+  profileFollowingLabel = new QLabel("", this);
+  profilePostsLabel = new QLabel("", this);
   followProfileButton = new QPushButton("", this);
   followProfileButton->setFixedSize(100, 36);
   followProfileButton->setVisible(false);
   headerLayout->addWidget(profileLoginLabel);
-  headerLayout->addWidget(profileEmailLabel);
-  headerLayout->addWidget(profilePhoneLabel);
-  headerLayout->addWidget(followersLabel);
-  headerLayout->addWidget(followingLabel);
+  headerLayout->addWidget(profileFollowersLabel);
+  headerLayout->addWidget(profileFollowingLabel);
+  headerLayout->addWidget(profilePostsLabel);
   headerLayout->addWidget(followProfileButton);
   profileHeader->setVisible(false);
   mainLayout->addWidget(profileHeader);
@@ -348,28 +356,28 @@ void FeedWindow::setupUI() {
 
   QHBoxLayout *bottomBar = new QHBoxLayout();
   bottomBar->setContentsMargins(10, 5, 10, 5);
-  bottomBar->addStretch();
 
   if (currentUsername.isEmpty()) {
     findFriendsButton = new QPushButton("🔍", this);
     createPostButton = new QPushButton("➕", this);
     profileButton = new QPushButton("👤", this);
     sharedButton = new QPushButton("Shared", this);
-    friendsButton = new QPushButton("Friends", this);
+    followButton = new QPushButton("Follow", this);
 
     findFriendsButton->setFixedSize(50, 48);
     createPostButton->setFixedSize(50, 48);
     profileButton->setFixedSize(50, 48);
     sharedButton->setFixedSize(100, 44);
-    friendsButton->setFixedSize(100, 44);
+    followButton->setFixedSize(100, 44);
 
+    bottomBar->addStretch();
     bottomBar->addWidget(findFriendsButton);
     bottomBar->addSpacing(10);
     bottomBar->addWidget(sharedButton);
     bottomBar->addSpacing(10);
     bottomBar->addWidget(createPostButton);
     bottomBar->addSpacing(10);
-    bottomBar->addWidget(friendsButton);
+    bottomBar->addWidget(followButton);
     bottomBar->addSpacing(10);
     bottomBar->addWidget(profileButton);
     bottomBar->addStretch();
@@ -382,25 +390,25 @@ void FeedWindow::setupUI() {
             &FeedWindow::onProfileClick);
     connect(sharedButton, &QPushButton::clicked, this,
             &FeedWindow::onToggleFeedShared);
-    connect(friendsButton, &QPushButton::clicked, this,
-            &FeedWindow::onToggleFeedFriends);
+    connect(followButton, &QPushButton::clicked, this,
+            &FeedWindow::onToggleFeedFollow);
 
     sharedButton->setCheckable(true);
-    friendsButton->setCheckable(true);
-    sharedButton->setChecked(!friendsFeed);
-    friendsButton->setChecked(friendsFeed);
+    followButton->setCheckable(true);
+    sharedButton->setChecked(!followFeed);
+    followButton->setChecked(followFeed);
   } else if (currentUsername == "me") {
     QPushButton *backButton = new QPushButton("← Back", this);
     backButton->setFixedSize(100, 48);
+    exitProfileButton = new QPushButton("Exit", this);
+    exitProfileButton->setFixedSize(100, 48);
     bottomBar->addWidget(backButton);
     bottomBar->addSpacing(10);
-    friendsListButton = new QPushButton("Friends", this);
-    friendsListButton->setFixedSize(100, 48);
-    bottomBar->addWidget(friendsListButton);
+    bottomBar->addWidget(exitProfileButton);
     bottomBar->addStretch();
     connect(backButton, &QPushButton::clicked, this, &FeedWindow::close);
-    connect(friendsListButton, &QPushButton::clicked, this,
-            &FeedWindow::onFriendsListClicked);
+    connect(exitProfileButton, &QPushButton::clicked, this,
+            &FeedWindow::onExitProfile);
   } else {
     QPushButton *backButton = new QPushButton("← Back", this);
     backButton->setFixedSize(100, 48);
@@ -456,14 +464,14 @@ void FeedWindow::setupUI() {
     createPostButton->setStyleSheet(transparentButtonStyle);
     profileButton->setStyleSheet(transparentButtonStyle);
     sharedButton->setStyleSheet(solidButtonStyle);
-    friendsButton->setStyleSheet(solidButtonStyle);
+    followButton->setStyleSheet(solidButtonStyle);
   } else {
     QPushButton *backButton =
         qobject_cast<QPushButton *>(bottomBar->itemAt(0)->widget());
     if (backButton)
       backButton->setStyleSheet(solidButtonStyle);
-    if (currentUsername == "me" && friendsListButton) {
-      friendsListButton->setStyleSheet(solidButtonStyle);
+    if (currentUsername == "me" && exitProfileButton) {
+      exitProfileButton->setStyleSheet(solidButtonStyle);
     }
   }
 
@@ -471,13 +479,9 @@ void FeedWindow::setupUI() {
 }
 
 void FeedWindow::loadProfileInfo() {
-  QString endpoint;
-  if (currentUsername == "me") {
-    endpoint = "http://127.0.0.1:8080/api/users/me";
-  } else {
-    endpoint =
-        QString("http://127.0.0.1:8080/api/users/%1").arg(currentUsername);
-  }
+  QString endpoint =
+      QString("http://127.0.0.1:8080/api/profiles/%1")
+          .arg(currentUsername == "me" ? currentUsername : currentUsername);
   QUrl url(endpoint);
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -491,24 +495,33 @@ void FeedWindow::loadProfileInfo() {
 void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
   if (reply->error() == QNetworkReply::NoError) {
     QByteArray response = reply->readAll();
+    qDebug().noquote() << "===server=> ";
+    qDebug().noquote() << QString::fromUtf8(response);
+    qDebug().noquote() << "";
     QJsonDocument doc = QJsonDocument::fromJson(response);
     if (doc.isObject()) {
-      QJsonObject user = doc.object();
-      profileLogin = user["login"].toString();
-      updateProfileHeader(user);
+      QJsonObject profile = doc.object();
+      updateProfileHeader(profile);
       profileHeader->setVisible(true);
       if (!isOwnProfile) {
         followProfileButton->setVisible(true);
-        bool isFriend = user["isFriend"].toBool();
-        followProfileButton->setText(isFriend ? "Unfollow" : "Follow");
+        bool isFollowing = profile["isFollowing"].toBool();
+        followProfileButton->setText(isFollowing ? "Unfollow" : "Follow");
         disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
-        if (isFriend) {
+        if (isFollowing) {
           connect(followProfileButton, &QPushButton::clicked, this,
                   &FeedWindow::onUnfollowFromProfile);
         } else {
           connect(followProfileButton, &QPushButton::clicked, this,
                   &FeedWindow::onFollowFromProfile);
         }
+      }
+      bool allowedToSee = profile["allowedToSee"].toBool();
+      if (!allowedToSee) {
+        showNoPostsImage();
+        loadMoreButton->setVisible(false);
+      } else {
+        loadPosts(false);
       }
     }
   } else {
@@ -517,22 +530,36 @@ void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
   reply->deleteLater();
 }
 
-void FeedWindow::updateProfileHeader(const QJsonObject &user) {
+void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
   profileLoginLabel->setText(
-      QString("Login: %1").arg(user["login"].toString()));
-  profileEmailLabel->setText(
-      QString("Email: %1").arg(user["email"].toString()));
-  profilePhoneLabel->setText(
-      QString("Phone: %1").arg(user["phone"].toString()));
-  followersLabel->setText(
-      QString("Followers: %1").arg(user["followersCount"].toInt()));
-  followingLabel->setText(
-      QString("Following: %1").arg(user["followingCount"].toInt()));
+      QString("Login: %1").arg(profile["login"].toString()));
+  profileFollowersLabel->setText(
+      QString("Followers: %1").arg(profile["followersCount"].toInt()));
+  profileFollowingLabel->setText(
+      QString("Following: %1").arg(profile["followingCount"].toInt()));
+  profilePostsLabel->setText(
+      QString("Posts: %1").arg(profile["postsCount"].toInt()));
   profileLoginLabel->setStyleSheet("font-weight: bold; font-size: 16px;");
-  profileEmailLabel->setStyleSheet("color: #666;");
-  profilePhoneLabel->setStyleSheet("color: #666;");
-  followersLabel->setStyleSheet("color: #888;");
-  followingLabel->setStyleSheet("color: #888;");
+  profileFollowersLabel->setStyleSheet("color: #888;");
+  profileFollowingLabel->setStyleSheet("color: #888;");
+  profilePostsLabel->setStyleSheet("color: #888;");
+}
+
+void FeedWindow::showNoPostsImage() {
+  clearPosts();
+  QPixmap noPostsPixmap(":/sources/no_posts.png");
+  if (!noPostsPixmap.isNull()) {
+    QLabel *imageLabel = new QLabel(this);
+    QPixmap scaled = noPostsPixmap.scaled(400, 400, Qt::KeepAspectRatio,
+                                          Qt::SmoothTransformation);
+    imageLabel->setPixmap(scaled);
+    imageLabel->setAlignment(Qt::AlignCenter);
+    postsLayout->addWidget(imageLabel);
+  } else {
+    QLabel *infoLabel = new QLabel("No posts available", this);
+    infoLabel->setAlignment(Qt::AlignCenter);
+    postsLayout->addWidget(infoLabel);
+  }
 }
 
 void FeedWindow::onFollowFromProfile() {
@@ -618,10 +645,10 @@ void FeedWindow::loadPosts(bool append) {
             .arg(limit)
             .arg(currentOffset);
   } else {
-    if (friendsFeed) {
+    if (followFeed) {
       endpoint =
           QString(
-              "http://127.0.0.1:8080/api/posts/feed/friends?limit=%1&offset=%2")
+              "http://127.0.0.1:8080/api/posts/feed/follow?limit=%1&offset=%2")
               .arg(limit)
               .arg(currentOffset);
     } else {
@@ -702,9 +729,10 @@ void FeedWindow::onFindFriendsClicked() {
   dialog.exec();
 }
 
-void FeedWindow::onFriendsListClicked() {
-  QMessageBox::information(this, "PRIYOMYSH",
-                           "Friends list will be shown here");
+void FeedWindow::onExitProfile() {
+  MainWindow *mainWin = new MainWindow();
+  mainWin->show();
+  close();
 }
 
 void FeedWindow::onAuthorClicked(const QString &author) {
@@ -770,16 +798,16 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
 }
 
 void FeedWindow::onToggleFeedShared() {
-  friendsFeed = false;
+  followFeed = false;
   sharedButton->setChecked(true);
-  friendsButton->setChecked(false);
+  followButton->setChecked(false);
   loadPosts(false);
 }
 
-void FeedWindow::onToggleFeedFriends() {
-  friendsFeed = true;
+void FeedWindow::onToggleFeedFollow() {
+  followFeed = true;
   sharedButton->setChecked(false);
-  friendsButton->setChecked(true);
+  followButton->setChecked(true);
   loadPosts(false);
 }
 
