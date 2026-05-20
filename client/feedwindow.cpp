@@ -26,7 +26,7 @@ static void showCustomWarning(QWidget *parent, const QString &text) {
     QPixmap original(":/sources/warning_01.png");
     QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("Warning");
+    msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
     msgBox.exec();
 }
@@ -36,7 +36,7 @@ static void showCustomError(QWidget *parent, const QString &text) {
     QPixmap original(":/sources/warning_01.png");
     QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("Error");
+    msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
     msgBox.exec();
 }
@@ -46,7 +46,7 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
     QPixmap original(":/sources/warn_happy.png");
     QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("Info");
+    msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
     msgBox.exec();
 }
@@ -270,21 +270,19 @@ FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *p
 FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
-    if (currentUsername == "me") {
-        setWindowTitle("My Profile");
-        isOwnProfile = true;
-    } else if (!currentUsername.isEmpty() && currentUsername != "me") {
-        setWindowTitle("Profile: " + currentUsername);
-        isOwnProfile = false;
-    } else {
-        setWindowTitle("Feed");
-        isOwnProfile = false;
-    }
-
+    setWindowTitle("PRIYOMYSH");
     setFixedSize(420, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
+
+    if (currentUsername == "me") {
+        isOwnProfile = true;
+    } else if (!currentUsername.isEmpty() && currentUsername != "me") {
+        isOwnProfile = false;
+    } else {
+        isOwnProfile = false;
+    }
 
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
@@ -660,7 +658,7 @@ void FeedWindow::onFindFriendsClicked() {
 }
 
 void FeedWindow::onFriendsListClicked() {
-    QMessageBox::information(this, "Friends", "Friends list will be shown here (endpoint to be added)");
+    QMessageBox::information(this, "PRIYOMYSH", "Friends list will be shown here");
 }
 
 void FeedWindow::onAuthorClicked(const QString &author) {

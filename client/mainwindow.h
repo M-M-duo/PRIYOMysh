@@ -12,18 +12,25 @@ public:
     ~MainWindow();
 
 private slots:
-    void onSignInClicked();
-    void onRegisterClicked();
+    void onLoginClicked(const QString &login, const QString &password);
+    void onRegisterClicked(const QString &login, const QString &password,
+                           const QString &email, const QString &phone, bool isPrivate);
     void onAuthReplyFinished(QNetworkReply *reply);
-    void onSignInReplyFinished(QNetworkReply *reply);
 
 private:
     QNetworkAccessManager *networkManager;
-    void showAuthDialog(const QString &mode);
-    void showSignInDialog(const QString &mode);
+    QDialog *currentDialog;
+    QString pendingMode;
+    QString pendingLogin;
+    QString pendingPassword;
+    QString pendingEmail;
+    QString pendingPhone;
+    bool pendingIsPrivate;
+
     void sendAuthRequest(const QString &login, const QString &password,
-                         const QString &email, const QString &phone, bool isPublic, const QString &mode);
+                         const QString &email, const QString &phone, bool isPrivate, const QString &mode);
     void sendSignInRequest(const QString &login, const QString &password);
+    void showErrorForField(const QString &field, const QString &message);
 };
 
 #endif

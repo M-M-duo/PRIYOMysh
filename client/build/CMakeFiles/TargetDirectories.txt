@@ -1,0 +1,4 @@
+/home/maver1ckpy/coding/projects/PRIYOMysh/client/build/CMakeFiles/ping_monitor.dir
+/home/maver1ckpy/coding/projects/PRIYOMysh/client/build/CMakeFiles/edit_cache.dir
+/home/maver1ckpy/coding/projects/PRIYOMysh/client/build/CMakeFiles/rebuild_cache.dir
+/home/maver1ckpy/coding/projects/PRIYOMysh/client/build/CMakeFiles/ping_monitor_autogen.dir
