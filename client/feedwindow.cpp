@@ -285,9 +285,9 @@ FeedWindow::FeedWindow(const QString &token, const QString &username,
       currentOffset(0), limit(10), followFeed(false), isOwnProfile(false) {
   networkManager = new QNetworkAccessManager(this);
   setupUI();
-  if (!username.isEmpty() && username != "me") {
-    loadProfileInfo();
-  } else if (username == "me") {
+  if (username == "me") {
+    fetchMyLogin();
+  } else if (!username.isEmpty() && username != "me") {
     loadProfileInfo();
   }
   loadPosts(false);
@@ -478,10 +478,40 @@ void FeedWindow::setupUI() {
   connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
 }
 
+void FeedWindow::fetchMyLogin() {
+  QUrl url("http://127.0.0.1:8080/api/users/me");
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+  request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+  QNetworkReply *reply = networkManager->get(request);
+  connect(reply, &QNetworkReply::finished,
+          [this, reply]() { onMyLoginFinished(reply); });
+}
+
+void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
+  if (reply->error() == QNetworkReply::NoError) {
+    QByteArray response = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(response);
+    if (doc.isObject()) {
+      QJsonObject obj = doc.object();
+      myActualLogin = obj["login"].toString();
+      loadProfileInfo();
+    } else {
+      showCustomError(this, "Failed to get own login");
+    }
+  } else {
+    showCustomError(this, "Failed to fetch login: " + reply->errorString());
+  }
+  reply->deleteLater();
+}
+
 void FeedWindow::loadProfileInfo() {
+  QString loginToUse = (currentUsername == "me" && !myActualLogin.isEmpty())
+                           ? myActualLogin
+                           : currentUsername;
   QString endpoint =
-      QString("http://127.0.0.1:8080/api/profiles/%1")
-          .arg(currentUsername == "me" ? currentUsername : currentUsername);
+      QString("http://127.0.0.1:8080/api/profiles/%1").arg(loginToUse);
   QUrl url(endpoint);
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");

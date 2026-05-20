@@ -40,11 +40,13 @@ private slots:
   void onProfileInfoFinished(QNetworkReply *reply);
   void onFollowFromProfile();
   void onUnfollowFromProfile();
+  void onMyLoginFinished(QNetworkReply *reply);
 
 private:
   QNetworkAccessManager *networkManager;
   QString authToken;
   QString currentUsername;
+  QString myActualLogin;
   int currentOffset;
   int limit;
   bool followFeed;
@@ -77,6 +79,7 @@ private:
   void loadProfileInfo();
   void updateProfileHeader(const QJsonObject &profile);
   void showNoPostsImage();
+  void fetchMyLogin();
 };
 
 #endif
