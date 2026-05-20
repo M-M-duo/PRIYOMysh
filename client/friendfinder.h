@@ -21,22 +21,26 @@ private slots:
     void onSearchFinished(QNetworkReply *reply);
     void onFollowFinished(QNetworkReply *reply);
     void onUnfollowFinished(QNetworkReply *reply);
+    void onViewPosts();
 
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
     QString currentSearchLogin;
     bool isFollowing;
+    bool isMutual;
 
     QLineEdit *searchEdit;
     QPushButton *searchButton;
+    QWidget *resultWidget;
     QLabel *resultLabel;
+    QPushButton *viewPostsButton;
     QPushButton *actionButton;
     QLabel *statusLabel;
 
     void setupUI();
     void showError(const QString &message);
-    void showInfo(const QString &message);
+    void clearResult();
 };
 
 #endif

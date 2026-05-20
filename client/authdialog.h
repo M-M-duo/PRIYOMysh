@@ -13,14 +13,25 @@ public:
     QString getPassword() const;
     QString getEmail() const;
     QString getPhone() const;
-    bool isPublic() const;
+    bool isPrivate() const;
+    void clearField(const QString &fieldName);
+
+signals:
+    void loginClicked(const QString &login, const QString &password);
+    void registerClicked(const QString &login, const QString &password,
+                         const QString &email, const QString &phone, bool isPrivate);
+
+private slots:
+    void onButtonClicked();
 
 private:
     QLineEdit *loginEdit;
     QLineEdit *passwordEdit;
     QLineEdit *emailEdit;
     QLineEdit *phoneEdit;
-    QCheckBox *isPublicCheckBox;
+    QCheckBox *privateCheckBox;
+    QString mode;
+    void setupUI();
 };
 
 #endif
