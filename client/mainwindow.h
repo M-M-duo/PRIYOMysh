@@ -6,31 +6,33 @@
 #include <QNetworkReply>
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+  Q_OBJECT
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+  MainWindow(QWidget *parent = nullptr);
+  ~MainWindow();
 
 private slots:
-    void onLoginClicked(const QString &login, const QString &password);
-    void onRegisterClicked(const QString &login, const QString &password,
-                           const QString &email, const QString &phone, bool isPrivate);
-    void onAuthReplyFinished(QNetworkReply *reply);
+  void onLoginClicked(const QString &login, const QString &password);
+  void onRegisterClicked(const QString &login, const QString &password,
+                         const QString &email, const QString &phone,
+                         bool isPrivate);
+  void onAuthReplyFinished(QNetworkReply *reply);
 
 private:
-    QNetworkAccessManager *networkManager;
-    QDialog *currentDialog;
-    QString pendingMode;
-    QString pendingLogin;
-    QString pendingPassword;
-    QString pendingEmail;
-    QString pendingPhone;
-    bool pendingIsPrivate;
+  QNetworkAccessManager *networkManager;
+  QDialog *currentDialog;
+  QString pendingMode;
+  QString pendingLogin;
+  QString pendingPassword;
+  QString pendingEmail;
+  QString pendingPhone;
+  bool pendingIsPrivate;
 
-    void sendAuthRequest(const QString &login, const QString &password,
-                         const QString &email, const QString &phone, bool isPrivate, const QString &mode);
-    void sendSignInRequest(const QString &login, const QString &password);
-    void showErrorForField(const QString &field, const QString &message);
+  void sendAuthRequest(const QString &login, const QString &password,
+                       const QString &email, const QString &phone,
+                       bool isPrivate, const QString &mode);
+  void sendSignInRequest(const QString &login, const QString &password);
+  void showErrorForField(const QString &field, const QString &message);
 };
 
 #endif
