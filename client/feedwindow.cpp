@@ -601,7 +601,7 @@ void FeedWindow::clearPosts() {
         delete child->widget();
         delete child;
     }
-    m_postWidgets.clear(); // Теперь очистка идет централизованно
+    m_postWidgets.clear();
 }
 
 void FeedWindow::addPost(const QJsonObject &post) {
