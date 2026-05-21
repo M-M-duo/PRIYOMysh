@@ -35,7 +35,7 @@ static QString extractErrorMessage(QNetworkReply *reply) {
 }
 
 FriendFinder::FriendFinder(const QString &token, QWidget *parent)
-    : QDialog(parent), authToken(token), isFollowing(false), isMutual(false) {
+    : QDialog(parent), authToken(token) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
 }
@@ -44,7 +44,7 @@ FriendFinder::~FriendFinder() {}
 
 void FriendFinder::setupUI() {
     setWindowTitle("PRIYOMYSH");
-    resize(400, 200);
+    resize(400, 150);
     setModal(true);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -57,37 +57,19 @@ void FriendFinder::setupUI() {
     searchLayout->addWidget(searchButton);
     layout->addLayout(searchLayout);
 
-    resultWidget = new QWidget(this);
-    QHBoxLayout *resultLayout = new QHBoxLayout(resultWidget);
-    resultLayout->setContentsMargins(0, 0, 0, 0);
-
     resultLabel = new QLabel("", this);
+    resultLabel->setAlignment(Qt::AlignCenter);
     resultLabel->setCursor(Qt::PointingHandCursor);
     resultLabel->installEventFilter(this);
-    actionButton = new QPushButton("", this);
-    resultLayout->addWidget(resultLabel);
-    resultLayout->addWidget(actionButton);
-
-    resultWidget->setVisible(false);
-    layout->addWidget(resultWidget);
-
-    statusLabel = new QLabel("", this);
-    statusLabel->setAlignment(Qt::AlignCenter);
-    layout->addWidget(statusLabel);
+    resultLabel->setVisible(false);
+    layout->addWidget(resultLabel);
 
     connect(searchButton, &QPushButton::clicked, this, &FriendFinder::searchUser);
-    connect(actionButton, &QPushButton::clicked, this, [this]() {
-        if (isFollowing) {
-            unfollowUser();
-        } else {
-            followUser();
-        }
-    });
 }
 
 void FriendFinder::clearResult() {
-    resultWidget->setVisible(false);
-    statusLabel->clear();
+    resultLabel->setVisible(false);
+    resultLabel->clear();
 }
 
 void FriendFinder::searchUser() {
@@ -112,102 +94,29 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(response);
-
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
-            bool isFollowed = obj["isFollowed"].toBool();
-            bool isMe = obj["isMe"].toBool();
-
             currentSearchLogin = login;
-            isFollowing = isFollowed;
-
             resultLabel->setText(login);
-            if (isMe) {
-                statusLabel->setText("it is you");
-                actionButton->setVisible(false);
-            } else {
-                statusLabel->setText(isFollowed ? "You follow" : "Not followed");
-                actionButton->setText(isFollowed ? "Unfollow" : "Follow");
-                actionButton->setVisible(true);
-            }
-            resultWidget->setVisible(true);
+            resultLabel->setVisible(true);
         } else {
-            resultWidget->setVisible(false);
-            statusLabel->setText("User not found");
+            resultLabel->setText("User not found");
+            resultLabel->setVisible(true);
         }
     } else {
-        QString errorMsg = extractErrorMessage(reply);
-        showMessage(this, "Search failed: " + errorMsg, QMessageBox::Critical);
-        clearResult();
-    }
-    reply->deleteLater();
-}
-
-void FriendFinder::followUser() {
-    QUrl url(API_BASE_URL + "/api/friends/add");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-
-    QJsonObject json;
-    json["login"] = currentSearchLogin;
-    QByteArray data = QJsonDocument(json).toJson();
-
-    QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, [this, reply]() { onFollowFinished(reply); });
-}
-
-void FriendFinder::onFollowFinished(QNetworkReply *reply) {
-    if (reply->error() == QNetworkReply::NoError) {
-        showMessage(this, "Friend request sent to " + currentSearchLogin, QMessageBox::Information);
-        isFollowing = true;
-        isMutual = false;
-        statusLabel->setText("You follow");
-        actionButton->setText("Unfollow");
-    } else {
-        QString errorMsg = extractErrorMessage(reply);
-        showMessage(this, "Add friend failed: " + errorMsg, QMessageBox::Critical);
-    }
-    reply->deleteLater();
-}
-
-void FriendFinder::unfollowUser() {
-    QUrl url(API_BASE_URL + "/api/friends/remove");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-
-    QJsonObject json;
-    json["login"] = currentSearchLogin;
-    QByteArray data = QJsonDocument(json).toJson();
-
-    QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, [this, reply]() { onUnfollowFinished(reply); });
-}
-
-void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
-    if (reply->error() == QNetworkReply::NoError) {
-        showMessage(this, "Friend removed: " + currentSearchLogin, QMessageBox::Information);
-        isFollowing = false;
-        isMutual = false;
-        statusLabel->setText("Not followed");
-        actionButton->setText("Follow");
-    } else {
-        QString errorMsg = extractErrorMessage(reply);
-        showMessage(this, "Remove friend failed: " + errorMsg, QMessageBox::Critical);
+        resultLabel->setText("Search failed");
+        resultLabel->setVisible(true);
     }
     reply->deleteLater();
 }
 
 void FriendFinder::onViewProfile() {
-    FeedWindow *userFeed = new FeedWindow(authToken, currentSearchLogin);
-    userFeed->show();
-    close();
-}
-
-void FriendFinder::showError(const QString &message) {
-    showMessage(this, message, QMessageBox::Critical);
+    if (!currentSearchLogin.isEmpty()) {
+        FeedWindow *userFeed = new FeedWindow(authToken, currentSearchLogin);
+        userFeed->show();
+        close();
+    }
 }
 
 bool FriendFinder::eventFilter(QObject *obj, QEvent *event) {

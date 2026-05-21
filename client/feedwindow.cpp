@@ -321,42 +321,47 @@ void FeedWindow::setupUI() {
     QHBoxLayout *bottomBar = new QHBoxLayout();
     bottomBar->setContentsMargins(10, 5, 10, 5);
 
-    if (currentUsername.isEmpty()) {
-        findFriendsButton = new QPushButton("⌕", this);
-        createPostButton = new QPushButton("+", this);
-        profileButton = new QPushButton("🐭", this);
-        sharedButton = new QPushButton("Shared", this);
-        followButton = new QPushButton("Follow", this);
+ if (currentUsername.isEmpty()) {
+    findFriendsButton = new QPushButton("⌕", this);
+    createPostButton = new QPushButton("+", this);
+    profileButton = new QPushButton("🐭", this);
+    sharedButton = new QPushButton("Shared", this);
+    followButton = new QPushButton("Follow", this);
 
-        findFriendsButton->setFixedSize(50, 48);
-        createPostButton->setFixedSize(50, 48);
-        profileButton->setFixedSize(50, 48);
-        sharedButton->setFixedSize(100, 44);
-        followButton->setFixedSize(100, 44);
+    findFriendsButton->setFixedSize(50, 48);
+    createPostButton->setFixedSize(50, 48);
+    profileButton->setFixedSize(50, 48);
+    sharedButton->setFixedSize(100, 44);
+    followButton->setFixedSize(100, 44);
 
-        bottomBar->addStretch();
-        bottomBar->addWidget(findFriendsButton);
-        bottomBar->addSpacing(10);
-        bottomBar->addWidget(sharedButton);
-        bottomBar->addSpacing(10);
-        bottomBar->addWidget(createPostButton);
-        bottomBar->addSpacing(10);
-        bottomBar->addWidget(followButton);
-        bottomBar->addSpacing(10);
-        bottomBar->addWidget(profileButton);
-        bottomBar->addStretch();
+    QLayoutItem *child;
+    while ((child = bottomBar->takeAt(0)) != nullptr) {
+        delete child;
+    }
 
-        connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
-        connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
-        connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
-        connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
-        connect(followButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFollow);
+    bottomBar->addWidget(findFriendsButton);
+    bottomBar->addSpacing(10);
+    bottomBar->addWidget(sharedButton);
 
-        sharedButton->setCheckable(true);
-        followButton->setCheckable(true);
-        sharedButton->setChecked(!followFeed);
-        followButton->setChecked(followFeed);
-    } else if (currentUsername == "me") {
+    bottomBar->addStretch(1);
+    bottomBar->addWidget(createPostButton);
+    bottomBar->addStretch(1);
+
+    bottomBar->addWidget(followButton);
+    bottomBar->addSpacing(10);
+    bottomBar->addWidget(profileButton);
+
+    connect(createPostButton, &QPushButton::clicked, this, &FeedWindow::onCreatePost);
+    connect(findFriendsButton, &QPushButton::clicked, this, &FeedWindow::onFindFriendsClicked);
+    connect(profileButton, &QPushButton::clicked, this, &FeedWindow::onProfileClick);
+    connect(sharedButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedShared);
+    connect(followButton, &QPushButton::clicked, this, &FeedWindow::onToggleFeedFollow);
+
+    sharedButton->setCheckable(true);
+    followButton->setCheckable(true);
+    sharedButton->setChecked(!followFeed);
+    followButton->setChecked(followFeed);
+} else if (currentUsername == "me") {
         QPushButton *backButton = new QPushButton("← Back", this);
         backButton->setFixedSize(100, 48);
         exitProfileButton = new QPushButton("Exit", this);
@@ -534,7 +539,7 @@ void FeedWindow::showNoPostsImage() {
     if (!noPostsPixmap.isNull()) {
         QLabel *imageLabel = new QLabel(this);
         QPixmap scaled =
-            noPostsPixmap.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            noPostsPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         imageLabel->setPixmap(scaled);
         imageLabel->setAlignment(Qt::AlignCenter);
         postsLayout->addWidget(imageLabel);
