@@ -19,17 +19,25 @@ protected:
 
 private slots:
     void searchUser();
+    void followUser();
+    void unfollowUser();
     void onSearchFinished(QNetworkReply *reply);
+    void onFollowFinished(QNetworkReply *reply);
+    void onUnfollowFinished(QNetworkReply *reply);
     void onViewProfile();
 
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
     QString currentSearchLogin;
+    bool isFollowing;
 
     QLineEdit *searchEdit;
     QPushButton *searchButton;
+    QWidget *resultWidget;
     QLabel *resultLabel;
+    QPushButton *actionButton;
+    QLabel *statusLabel;
 
     void setupUI();
     void clearResult();

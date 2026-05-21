@@ -35,7 +35,7 @@ static QString extractErrorMessage(QNetworkReply *reply) {
 }
 
 FriendFinder::FriendFinder(const QString &token, QWidget *parent)
-    : QDialog(parent), authToken(token) {
+    : QDialog(parent), authToken(token), isFollowing(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
 }
@@ -44,7 +44,7 @@ FriendFinder::~FriendFinder() {}
 
 void FriendFinder::setupUI() {
     setWindowTitle("PRIYOMYSH");
-    resize(400, 150);
+    resize(400, 200);
     setModal(true);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -57,19 +57,36 @@ void FriendFinder::setupUI() {
     searchLayout->addWidget(searchButton);
     layout->addLayout(searchLayout);
 
+    resultWidget = new QWidget(this);
+    QHBoxLayout *resultLayout = new QHBoxLayout(resultWidget);
+    resultLayout->setContentsMargins(0, 0, 0, 0);
+
     resultLabel = new QLabel("", this);
-    resultLabel->setAlignment(Qt::AlignCenter);
     resultLabel->setCursor(Qt::PointingHandCursor);
     resultLabel->installEventFilter(this);
-    resultLabel->setVisible(false);
-    layout->addWidget(resultLabel);
+    actionButton = new QPushButton("", this);
+    resultLayout->addWidget(resultLabel);
+    resultLayout->addWidget(actionButton);
+    resultWidget->setVisible(false);
+    layout->addWidget(resultWidget);
+
+    statusLabel = new QLabel("", this);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(statusLabel);
 
     connect(searchButton, &QPushButton::clicked, this, &FriendFinder::searchUser);
+    connect(actionButton, &QPushButton::clicked, this, [this]() {
+        if (isFollowing) {
+            unfollowUser();
+        } else {
+            followUser();
+        }
+    });
 }
 
 void FriendFinder::clearResult() {
-    resultLabel->setVisible(false);
-    resultLabel->clear();
+    resultWidget->setVisible(false);
+    statusLabel->clear();
 }
 
 void FriendFinder::searchUser() {
@@ -97,16 +114,74 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
+            bool isFollowed = obj["isFollowed"].toBool();
             currentSearchLogin = login;
+            isFollowing = isFollowed;
             resultLabel->setText(login);
-            resultLabel->setVisible(true);
+            actionButton->setText(isFollowed ? "Unfollow" : "Follow");
+            actionButton->setVisible(true);
+            statusLabel->clear();
+            resultWidget->setVisible(true);
         } else {
-            resultLabel->setText("User not found");
-            resultLabel->setVisible(true);
+            resultWidget->setVisible(false);
+            statusLabel->setText("User not found");
         }
     } else {
-        resultLabel->setText("Search failed");
-        resultLabel->setVisible(true);
+        QString errorMsg = extractErrorMessage(reply);
+        showMessage(this, "Search failed: " + errorMsg, QMessageBox::Critical);
+        clearResult();
+    }
+    reply->deleteLater();
+}
+
+void FriendFinder::followUser() {
+    QUrl url(API_BASE_URL + "/api/friends/add");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QJsonObject json;
+    json["login"] = currentSearchLogin;
+    QByteArray data = QJsonDocument(json).toJson();
+
+    QNetworkReply *reply = networkManager->post(request, data);
+    connect(reply, &QNetworkReply::finished, [this, reply]() { onFollowFinished(reply); });
+}
+
+void FriendFinder::onFollowFinished(QNetworkReply *reply) {
+    if (reply->error() == QNetworkReply::NoError) {
+        isFollowing = true;
+        actionButton->setText("Unfollow");
+        statusLabel->setText("You follow");
+    } else {
+        QString errorMsg = extractErrorMessage(reply);
+        showMessage(this, "Follow failed: " + errorMsg, QMessageBox::Critical);
+    }
+    reply->deleteLater();
+}
+
+void FriendFinder::unfollowUser() {
+    QUrl url(API_BASE_URL + "/api/friends/remove");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QJsonObject json;
+    json["login"] = currentSearchLogin;
+    QByteArray data = QJsonDocument(json).toJson();
+
+    QNetworkReply *reply = networkManager->post(request, data);
+    connect(reply, &QNetworkReply::finished, [this, reply]() { onUnfollowFinished(reply); });
+}
+
+void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
+    if (reply->error() == QNetworkReply::NoError) {
+        isFollowing = false;
+        actionButton->setText("Follow");
+        statusLabel->setText("Not followed");
+    } else {
+        QString errorMsg = extractErrorMessage(reply);
+        showMessage(this, "Unfollow failed: " + errorMsg, QMessageBox::Critical);
     }
     reply->deleteLater();
 }
