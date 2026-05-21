@@ -235,7 +235,7 @@ protected:
     QString postId;
     FeedWindow *feedWindow;
     QLabel *authorLabel;
-    QList<QPixmap> cachedImages; // Храним готовые QPixmap вместо base64 строк
+    QList<QPixmap> cachedImages;
     int currentImageIndex;
     QLabel *imageLabel;
     QLabel *contentLabel;
@@ -322,9 +322,9 @@ void FeedWindow::setupUI() {
     bottomBar->setContentsMargins(10, 5, 10, 5);
 
     if (currentUsername.isEmpty()) {
-        findFriendsButton = new QPushButton("🔍", this);
-        createPostButton = new QPushButton("➕", this);
-        profileButton = new QPushButton("👤", this);
+        findFriendsButton = new QPushButton("⌕", this);
+        createPostButton = new QPushButton("+", this);
+        profileButton = new QPushButton("🐭", this);
         sharedButton = new QPushButton("Shared", this);
         followButton = new QPushButton("Follow", this);
 
@@ -382,22 +382,24 @@ void FeedWindow::setupUI() {
 
     setCentralWidget(central);
 
-    QString transparentButtonStyle = R"(
-        QPushButton {
-            background-color: transparent;
-            border: none;
-            border-radius: 18px;
-            font-size: 20px;
-            font-weight: 500;
-            color: #333;
-        }
-        QPushButton:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-        QPushButton:pressed {
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-    )";
+    auto transparentButtonStyle = [](int fontSize) -> QString {
+        return QString(R"(
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 18px;
+                font-weight: 500;
+                font-size: %1px;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+        )").arg(fontSize);
+    };
 
     QString solidButtonStyle = R"(
         QPushButton {
@@ -418,9 +420,9 @@ void FeedWindow::setupUI() {
     )";
 
     if (currentUsername.isEmpty()) {
-        findFriendsButton->setStyleSheet(transparentButtonStyle);
-        createPostButton->setStyleSheet(transparentButtonStyle);
-        profileButton->setStyleSheet(transparentButtonStyle);
+        findFriendsButton->setStyleSheet(transparentButtonStyle(40));
+        createPostButton->setStyleSheet(transparentButtonStyle(30));
+        profileButton->setStyleSheet(transparentButtonStyle(25));
         sharedButton->setStyleSheet(solidButtonStyle);
         followButton->setStyleSheet(solidButtonStyle);
     } else {
