@@ -447,8 +447,7 @@ void FeedWindow::fetchMyLogin() {
     connect(reply, &QNetworkReply::finished, [this, reply]() { onMyLoginFinished(reply); });
 }
 
-
-//TODO: setup endpoint with /me
+// TODO: setup endpoint with /me
 void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
@@ -469,7 +468,7 @@ void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
 
 void FeedWindow::loadProfileInfo() {
     QString loginToUse =
-        (currentUsername == "me" && !myActualLogin.isEmpty()) ? myActualLogin : currentUsername;
+        (currentUsername == "me" && !myActualLogin.isEmpty()) ? "me" : currentUsername;
     QString endpoint = QString("%1/api/profiles/%2").arg(API_BASE_URL, loginToUse);
     QUrl url(endpoint);
     QNetworkRequest request(url);
