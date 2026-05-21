@@ -61,12 +61,14 @@ void FriendFinder::setupUI() {
     resultWidget = new QWidget(this);
     QHBoxLayout *resultLayout = new QHBoxLayout(resultWidget);
     resultLayout->setContentsMargins(0, 0, 0, 0);
+
     resultLabel = new QLabel("", this);
-    viewProfileButton = new QPushButton("View profile", this);
+    resultLabel->setCursor(Qt::PointingHandCursor);
+    resultLabel->installEventFilter(this);
     actionButton = new QPushButton("", this);
     resultLayout->addWidget(resultLabel);
-    resultLayout->addWidget(viewProfileButton);
     resultLayout->addWidget(actionButton);
+
     resultWidget->setVisible(false);
     layout->addWidget(resultWidget);
 
@@ -117,17 +119,27 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
-            bool isFriend = obj["isFriend"].toBool();
-            bool mutual = obj["mutual"].toBool();
+            bool isFollowed = obj["isFollowed"].toBool();
+            bool isMe = obj["isMe"].toBool();
 
             currentSearchLogin = login;
-            isFollowing = isFriend;
-            isMutual = mutual;
+            isFollowing = isFollowed;
 
             resultLabel->setText(login);
-            statusLabel->setText(mutual ? "You are friends"
-                                        : (isFriend ? "Friend request sent" : ""));
-            actionButton->setText(isFriend ? "Unfollow" : "Follow");
+            if (isMe) {
+                statusLabel->setText("it is you");
+                actionButton->setVisible(false);
+            } else {
+                statusLabel->setText(isFollowed ? "You follow" : "Not followed");
+                actionButton->setText(isFollowed ? "Unfollow" : "Follow");
+                actionButton->setVisible(true);
+                disconnect(actionButton, &QPushButton::clicked, this, nullptr);
+                if (isFollowed) {
+                    connect(actionButton, &QPushButton::clicked, this, &FriendFinder::unfollowUser);
+                } else {
+                    connect(actionButton, &QPushButton::clicked, this, &FriendFinder::followUser);
+                }
+            }
             resultWidget->setVisible(true);
         } else {
             resultWidget->setVisible(false);
@@ -205,4 +217,12 @@ void FriendFinder::onViewProfile() {
 
 void FriendFinder::showError(const QString &message) {
     showMessage(this, message, QMessageBox::Critical);
+}
+
+bool FriendFinder::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == resultLabel && event->type() == QEvent::MouseButtonPress) {
+        onViewProfile();
+        return true;
+    }
+    return QDialog::eventFilter(obj, event);
 }

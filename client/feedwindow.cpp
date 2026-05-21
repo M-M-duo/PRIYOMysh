@@ -250,19 +250,17 @@ protected:
 };
 
 FeedWindow::FeedWindow(const QString &token, const QString &username, QWidget *parent)
-    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10),
-      followFeed(false), isOwnProfile(false) {
-
-    setAttribute(Qt::WA_DeleteOnClose);
-
+    : QMainWindow(parent), authToken(token), currentUsername(username), currentOffset(0), limit(10), followFeed(false), isOwnProfile(false)
+{
     networkManager = new QNetworkAccessManager(this);
     setupUI();
     if (username == "me") {
         fetchMyLogin();
     } else if (!username.isEmpty() && username != "me") {
         loadProfileInfo();
+    } else {
+        loadPosts(false);
     }
-    loadPosts(false);
 }
 
 FeedWindow::~FeedWindow() {}
