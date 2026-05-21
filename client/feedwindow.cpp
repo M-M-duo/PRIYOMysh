@@ -269,7 +269,7 @@ FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
     setWindowTitle("PRIYOMYSH");
-    setFixedSize(440, 840);
+    setFixedSize(450, 840);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
@@ -447,6 +447,8 @@ void FeedWindow::fetchMyLogin() {
     connect(reply, &QNetworkReply::finished, [this, reply]() { onMyLoginFinished(reply); });
 }
 
+
+//TODO: setup endpoint with /me
 void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
