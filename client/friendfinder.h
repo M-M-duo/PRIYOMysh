@@ -13,7 +13,7 @@ class FriendFinder : public QDialog {
 public:
     explicit FriendFinder(const QString &token, QWidget *parent = nullptr);
     ~FriendFinder();
-    
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
@@ -37,7 +37,6 @@ private:
     QPushButton *searchButton;
     QWidget *resultWidget;
     QLabel *resultLabel;
-    QPushButton *viewProfileButton;
     QPushButton *actionButton;
     QLabel *statusLabel;
 

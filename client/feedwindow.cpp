@@ -438,7 +438,7 @@ void FeedWindow::setupUI() {
 }
 
 void FeedWindow::fetchMyLogin() {
-    QUrl url(API_BASE_URL + "/api/users/me");
+    QUrl url(API_BASE_URL + "/api/profiles/me");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());

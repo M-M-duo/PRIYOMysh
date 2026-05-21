@@ -18,7 +18,6 @@ static void showMessage(QWidget *parent, const QString &text, QMessageBox::Icon 
     msgBox.setIcon(icon);
     msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
-
     QScreen *screen = QGuiApplication::primaryScreen();
     int screenHeight = screen->availableGeometry().height();
     msgBox.move(170, (screenHeight - msgBox.height()) / 2);
@@ -77,8 +76,6 @@ void FriendFinder::setupUI() {
     layout->addWidget(statusLabel);
 
     connect(searchButton, &QPushButton::clicked, this, &FriendFinder::searchUser);
-    connect(viewProfileButton, &QPushButton::clicked, this, &FriendFinder::onViewProfile);
-
     connect(actionButton, &QPushButton::clicked, this, [this]() {
         if (isFollowing) {
             unfollowUser();
@@ -133,12 +130,6 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
                 statusLabel->setText(isFollowed ? "You follow" : "Not followed");
                 actionButton->setText(isFollowed ? "Unfollow" : "Follow");
                 actionButton->setVisible(true);
-                disconnect(actionButton, &QPushButton::clicked, this, nullptr);
-                if (isFollowed) {
-                    connect(actionButton, &QPushButton::clicked, this, &FriendFinder::unfollowUser);
-                } else {
-                    connect(actionButton, &QPushButton::clicked, this, &FriendFinder::followUser);
-                }
             }
             resultWidget->setVisible(true);
         } else {
@@ -172,7 +163,7 @@ void FriendFinder::onFollowFinished(QNetworkReply *reply) {
         showMessage(this, "Friend request sent to " + currentSearchLogin, QMessageBox::Information);
         isFollowing = true;
         isMutual = false;
-        statusLabel->setText("Friend request sent");
+        statusLabel->setText("You follow");
         actionButton->setText("Unfollow");
     } else {
         QString errorMsg = extractErrorMessage(reply);
@@ -200,7 +191,7 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
         showMessage(this, "Friend removed: " + currentSearchLogin, QMessageBox::Information);
         isFollowing = false;
         isMutual = false;
-        statusLabel->setText("");
+        statusLabel->setText("Not followed");
         actionButton->setText("Follow");
     } else {
         QString errorMsg = extractErrorMessage(reply);
