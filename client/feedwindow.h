@@ -18,9 +18,12 @@ class PostWidget;
 class FeedWindow : public QMainWindow {
     Q_OBJECT
 public:
-    explicit FeedWindow(const QString &token, const QString &username = QString(),
-                        QWidget *parent = nullptr);
+    explicit FeedWindow(const QString &token, QWidget *parent = nullptr);
     ~FeedWindow();
+
+    void loadFeed(bool friendsOnly = false);
+    void loadProfile(const QString &login);
+    void loadMyProfile();
 
 public slots:
     void onAuthorClicked(const QString &author);
@@ -32,11 +35,11 @@ private slots:
     void onCreatePost();
     void onProfileClick();
     void onFindFriendsClicked();
-    void onExitProfile();
-    void onPostReplyFinished(QNetworkReply *reply);
-    void onLoadPostsFinished(QNetworkReply *reply);
+    void onBackClicked();
     void onToggleFeedShared();
     void onToggleFeedFollow();
+    void onPostReplyFinished(QNetworkReply *reply);
+    void onLoadPostsFinished(QNetworkReply *reply);
     void onProfileInfoFinished(QNetworkReply *reply);
     void onFollowFromProfile();
     void onUnfollowFromProfile();
@@ -47,12 +50,14 @@ private slots:
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
-    QString currentUsername;
     QString myActualLogin;
     int currentOffset;
     int limit;
-    bool followFeed;
+    bool friendsFeed;
     bool isOwnProfile;
+    bool isProfileMode;
+    QString currentProfileLogin;
+
     QScrollArea *scrollArea;
     QWidget *scrollWidget;
     QVBoxLayout *postsLayout;
@@ -60,7 +65,7 @@ private:
     QPushButton *createPostButton;
     QPushButton *profileButton;
     QPushButton *findFriendsButton;
-    QPushButton *exitProfileButton;
+    QPushButton *backButton;
     QPushButton *sharedButton;
     QPushButton *followButton;
     QPushButton *followersButton;
@@ -79,11 +84,11 @@ private:
     void addPost(const QJsonObject &post);
     void showError(const QString &message);
     void updatePostReaction(const QString &postId, int newLikes, int newDislikes);
-    void loadProfileInfo();
     void updateProfileHeader(const QJsonObject &profile);
     void showNoPostsImage();
     void fetchMyLogin();
     void showUserList(const QString &title, const QString &endpoint);
+    void resetToMainFeed();
 };
 
 #endif

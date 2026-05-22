@@ -221,7 +221,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                FeedWindow *feed = new FeedWindow(token, QString());
+                FeedWindow *feed = new FeedWindow(token);
                 feed->show();
                 if (currentDialog) {
                     currentDialog->accept();

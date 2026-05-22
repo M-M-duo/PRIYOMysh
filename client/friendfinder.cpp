@@ -35,7 +35,7 @@ static QString extractErrorMessage(QNetworkReply *reply) {
 }
 
 FriendFinder::FriendFinder(const QString &token, QWidget *parent)
-    : QDialog(parent), authToken(token), isFollowing(false) {
+    : QDialog(parent), authToken(token), isFollowing(false), isMutual(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
 }
@@ -67,6 +67,7 @@ void FriendFinder::setupUI() {
     actionButton = new QPushButton("", this);
     resultLayout->addWidget(resultLabel);
     resultLayout->addWidget(actionButton);
+
     resultWidget->setVisible(false);
     layout->addWidget(resultWidget);
 
@@ -111,16 +112,25 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(response);
+
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
             bool isFollowed = obj["isFollowed"].toBool();
+            bool isMe = obj["isMe"].toBool();
+
             currentSearchLogin = login;
             isFollowing = isFollowed;
+
             resultLabel->setText(login);
-            actionButton->setText(isFollowed ? "Unfollow" : "Follow");
-            actionButton->setVisible(true);
-            statusLabel->clear();
+            if (isMe) {
+                statusLabel->setText("it is you");
+                actionButton->setVisible(false);
+            } else {
+                statusLabel->setText(isFollowed ? "You follow" : "Not followed");
+                actionButton->setText(isFollowed ? "Unfollow" : "Follow");
+                actionButton->setVisible(true);
+            }
             resultWidget->setVisible(true);
         } else {
             resultWidget->setVisible(false);
@@ -150,9 +160,10 @@ void FriendFinder::followUser() {
 
 void FriendFinder::onFollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
+        showMessage(this, "Followed " + currentSearchLogin, QMessageBox::Information);
         isFollowing = true;
-        actionButton->setText("Unfollow");
         statusLabel->setText("You follow");
+        actionButton->setText("Unfollow");
     } else {
         QString errorMsg = extractErrorMessage(reply);
         showMessage(this, "Follow failed: " + errorMsg, QMessageBox::Critical);
@@ -176,9 +187,10 @@ void FriendFinder::unfollowUser() {
 
 void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
+        showMessage(this, "Unfollowed " + currentSearchLogin, QMessageBox::Information);
         isFollowing = false;
-        actionButton->setText("Follow");
         statusLabel->setText("Not followed");
+        actionButton->setText("Follow");
     } else {
         QString errorMsg = extractErrorMessage(reply);
         showMessage(this, "Unfollow failed: " + errorMsg, QMessageBox::Critical);
@@ -188,7 +200,8 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
 
 void FriendFinder::onViewProfile() {
     if (!currentSearchLogin.isEmpty()) {
-        FeedWindow *userFeed = new FeedWindow(authToken, currentSearchLogin);
+        FeedWindow *userFeed = new FeedWindow(authToken);
+        userFeed->loadProfile(currentSearchLogin);
         userFeed->show();
         close();
     }

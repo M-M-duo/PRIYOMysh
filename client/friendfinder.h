@@ -31,6 +31,7 @@ private:
     QString authToken;
     QString currentSearchLogin;
     bool isFollowing;
+    bool isMutual;
 
     QLineEdit *searchEdit;
     QPushButton *searchButton;
