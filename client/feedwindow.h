@@ -89,6 +89,8 @@ private:
     void fetchMyLogin();
     void showUserList(const QString &title, const QString &endpoint);
     void resetToMainFeed();
+    void showFeedButtons();
+    void showProfileButtons();
 };
 
 #endif

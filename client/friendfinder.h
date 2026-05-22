@@ -8,10 +8,12 @@
 #include <QNetworkReply>
 #include <QPushButton>
 
+class FeedWindow;
+
 class FriendFinder : public QDialog {
     Q_OBJECT
 public:
-    explicit FriendFinder(const QString &token, QWidget *parent = nullptr);
+    explicit FriendFinder(const QString &token, FeedWindow *parent = nullptr);
     ~FriendFinder();
 
 protected:
@@ -29,6 +31,7 @@ private slots:
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
+    FeedWindow *parentFeedWindow;
     QString currentSearchLogin;
     bool isFollowing;
     bool isMutual;

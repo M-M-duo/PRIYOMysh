@@ -459,22 +459,44 @@ void FeedWindow::setupUI() {
     connect(loadMoreButton, &QPushButton::clicked, this, &FeedWindow::loadMore);
 }
 
+void FeedWindow::showFeedButtons() {
+    findFriendsButton->setVisible(true);
+    sharedButton->setVisible(true);
+    createPostButton->setVisible(true);
+    followButton->setVisible(true);
+    profileButton->setVisible(true);
+    backButton->setVisible(false);
+    if (followProfileButton) followProfileButton->setVisible(false);
+}
+
+void FeedWindow::showProfileButtons() {
+    findFriendsButton->setVisible(false);
+    sharedButton->setVisible(false);
+    createPostButton->setVisible(false);
+    followButton->setVisible(false);
+    profileButton->setVisible(false);
+    backButton->setVisible(true);
+}
+
 void FeedWindow::resetToMainFeed() {
     isProfileMode = false;
     profileHeader->setVisible(false);
     backButton->setVisible(false);
+    showFeedButtons();
     loadFeed(friendsFeed);
 }
 
 void FeedWindow::loadFeed(bool friendsOnly) {
     isProfileMode = false;
     profileHeader->setVisible(false);
-    backButton->setVisible(false);
+    backButton->setVisible(true);
+    showProfileButtons();
     friendsFeed = friendsOnly;
     sharedButton->setChecked(!friendsFeed);
     followButton->setChecked(friendsFeed);
     currentOffset = 0;
     clearPosts();
+    showFeedButtons();
     loadPosts(false);
 }
 

@@ -34,8 +34,8 @@ static QString extractErrorMessage(QNetworkReply *reply) {
     return errorMsg;
 }
 
-FriendFinder::FriendFinder(const QString &token, QWidget *parent)
-    : QDialog(parent), authToken(token), isFollowing(false), isMutual(false) {
+FriendFinder::FriendFinder(const QString &token, FeedWindow *parent)
+    : QDialog(parent), authToken(token), parentFeedWindow(parent), isFollowing(false), isMutual(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
 }
@@ -199,10 +199,8 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
 }
 
 void FriendFinder::onViewProfile() {
-    if (!currentSearchLogin.isEmpty()) {
-        FeedWindow *userFeed = new FeedWindow(authToken);
-        userFeed->loadProfile(currentSearchLogin);
-        userFeed->show();
+    if (!currentSearchLogin.isEmpty() && parentFeedWindow) {
+        parentFeedWindow->loadProfile(currentSearchLogin);
         close();
     }
 }
