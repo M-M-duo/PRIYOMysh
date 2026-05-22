@@ -280,7 +280,6 @@ void FeedWindow::setupUI() {
     headerMainLayout->setSpacing(10);
     headerMainLayout->setContentsMargins(20, 10, 20, 10);
 
-    // Первая строка: аватар + ник
     QHBoxLayout *topRow = new QHBoxLayout();
     topRow->setSpacing(10);
     avatarLabel = new QLabel(this);
@@ -295,7 +294,6 @@ void FeedWindow::setupUI() {
     topRow->addStretch();
     headerMainLayout->addLayout(topRow);
 
-    // Вторая строка: три квадратные кнопки
     QHBoxLayout *statsRow = new QHBoxLayout();
     statsRow->setSpacing(10);
     statsRow->addStretch();
@@ -326,7 +324,6 @@ void FeedWindow::setupUI() {
     statsRow->addStretch();
     headerMainLayout->addLayout(statsRow);
 
-    // Третья строка: кнопка follow/unfollow
     followProfileButton = new QPushButton("", this);
     followProfileButton->setFixedHeight(44);
     followProfileButton->setMinimumWidth(width() - 80);
@@ -481,16 +478,12 @@ void FeedWindow::showProfileButtons() {
 void FeedWindow::resetToMainFeed() {
     isProfileMode = false;
     profileHeader->setVisible(false);
-    backButton->setVisible(false);
-    showFeedButtons();
     loadFeed(friendsFeed);
 }
 
 void FeedWindow::loadFeed(bool friendsOnly) {
     isProfileMode = false;
     profileHeader->setVisible(false);
-    backButton->setVisible(true);
-    showProfileButtons();
     friendsFeed = friendsOnly;
     sharedButton->setChecked(!friendsFeed);
     followButton->setChecked(friendsFeed);
@@ -506,6 +499,7 @@ void FeedWindow::loadProfile(const QString &login) {
     isOwnProfile = (login == myActualLogin);
     profileHeader->setVisible(false);
     backButton->setVisible(true);
+    showProfileButtons();
 
     QString endpoint = QString("%1/api/profiles/%2").arg(API_BASE_URL, login);
     QUrl url(endpoint);
