@@ -323,7 +323,7 @@ void FeedWindow::setupUI() {
     postsButton = new QPushButton("0\nposts", this);
     postsButton->setFixedSize(80, 80);
     postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }");
-    postsButton->setEnabled(false);
+    postsButton->setEnabled(true);
     postsButton->setCursor(Qt::ArrowCursor);
     statsRow->addWidget(postsButton);
 
