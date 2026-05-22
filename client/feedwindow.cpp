@@ -562,18 +562,25 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     followingButton->setText(QString("%1\nfollowing").arg(following));
     postsButton->setText(QString("%1\nposts").arg(posts));
 
-    if (!isOwnProfile) {
+    bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
+    if (isOwnProfile || isMe) {
+        followProfileButton->setVisible(true);
+        followProfileButton->setText("it's you");
+        followProfileButton->setEnabled(false);
+        followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; font-size: 14px; color: #888; }");
+    } else {
         followProfileButton->setVisible(true);
         bool isFollowing = profile["isFollowing"].toBool();
         followProfileButton->setText(isFollowing ? "Unfollow" : "Follow");
+        followProfileButton->setEnabled(true);
+        followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; font-size: 14px; }"
+                                           "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
         disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
         if (isFollowing) {
             connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onUnfollowFromProfile);
         } else {
             connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onFollowFromProfile);
         }
-    } else {
-        followProfileButton->setVisible(false);
     }
 }
 
@@ -886,6 +893,7 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                 QJsonArray users = doc.array();
                 QDialog dialog(this);
                 dialog.setWindowTitle(title);
+                dialog.resize(300, 400);
                 QVBoxLayout *layout = new QVBoxLayout(&dialog);
                 QListWidget *listWidget = new QListWidget(&dialog);
                 if (users.isEmpty()) {
@@ -902,6 +910,14 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                 QPushButton *closeBtn = new QPushButton("Close", &dialog);
                 layout->addWidget(closeBtn);
                 connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+                connect(listWidget, &QListWidget::itemClicked, [this, &dialog](QListWidgetItem *item) {
+                    QString login = item->text();
+                    if (login != "No users found") {
+                        dialog.accept();
+                        FeedWindow *userFeed = new FeedWindow(authToken, login);
+                        userFeed->show();
+                    }
+                });
                 dialog.exec();
             } else {
                 showCustomMessage(this, "Invalid response format", ":/sources/warning_01.png");
