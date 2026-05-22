@@ -35,7 +35,6 @@ private slots:
     void onExitProfile();
     void onPostReplyFinished(QNetworkReply *reply);
     void onLoadPostsFinished(QNetworkReply *reply);
-    void showUserList(const QString &title, const QString &endpoint);
     void onToggleFeedShared();
     void onToggleFeedFollow();
     void onProfileInfoFinished(QNetworkReply *reply);
@@ -66,6 +65,7 @@ private:
     QPushButton *followButton;
     QPushButton *followersButton;
     QPushButton *followingButton;
+    QPushButton *postsButton;
     QPushButton *followProfileButton;
     QLabel *loadingLabel;
     QMap<QString, PostWidget *> m_postWidgets;
@@ -83,6 +83,7 @@ private:
     void updateProfileHeader(const QJsonObject &profile);
     void showNoPostsImage();
     void fetchMyLogin();
+    void showUserList(const QString &title, const QString &endpoint);
 };
 
 #endif

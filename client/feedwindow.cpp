@@ -4,6 +4,7 @@
 #include "postdialog.h"
 #include <QDateTime>
 #include <QDebug>
+#include <QDialog>
 #include <QEvent>
 #include <QFrame>
 #include <QGuiApplication>
@@ -11,12 +12,10 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QDialog>
-#include <QListWidget>
-#include <QVBoxLayout>
 #include <QJsonValue>
 #include <QLabel>
 #include <QList>
+#include <QListWidget>
 #include <QMessageBox>
 #include <QNetworkRequest>
 #include <QPixmap>
@@ -283,46 +282,62 @@ void FeedWindow::setupUI() {
     mainLayout->setSpacing(0);
 
     profileHeader = new QWidget(this);
-    QHBoxLayout *headerLayout = new QHBoxLayout(profileHeader);
-    headerLayout->setAlignment(Qt::AlignCenter);
-    headerLayout->setSpacing(10);
+    QVBoxLayout *headerMainLayout = new QVBoxLayout(profileHeader);
+    headerMainLayout->setSpacing(10);
+    headerMainLayout->setContentsMargins(20, 10, 20, 10);
 
+    QHBoxLayout *topRow = new QHBoxLayout();
+    topRow->setSpacing(10);
     avatarLabel = new QLabel(this);
     avatarLabel->setFixedSize(60, 60);
     avatarLabel->setStyleSheet("border: 1px solid #ccc; border-radius: 30px; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
-    headerLayout->addWidget(avatarLabel);
-
+    topRow->addWidget(avatarLabel);
     profileLoginLabel = new QLabel("", this);
     profileLoginLabel->setStyleSheet("font-weight: bold; font-size: 16px;");
-    headerLayout->addWidget(profileLoginLabel);
+    topRow->addWidget(profileLoginLabel);
+    topRow->addStretch();
+    headerMainLayout->addLayout(topRow);
 
-    followProfileButton = new QPushButton("", this);
-    followProfileButton->setFixedSize(100, 36);
-    followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
-                                       "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
-    followProfileButton->setCursor(Qt::PointingHandCursor);
-    followProfileButton->setVisible(false);
-    headerLayout->addWidget(followProfileButton);
+    QHBoxLayout *statsRow = new QHBoxLayout();
+    statsRow->setSpacing(10);
+    statsRow->addStretch();
 
-    followersButton = new QPushButton("", this);
+    followersButton = new QPushButton("0\nfollowers", this);
     followersButton->setFixedSize(80, 80);
     followersButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
-    followersButton->setText("0\nfollowers");
     followersButton->setCursor(Qt::PointingHandCursor);
     connect(followersButton, &QPushButton::clicked, this, &FeedWindow::onFollowersClicked);
-    headerLayout->addWidget(followersButton);
+    statsRow->addWidget(followersButton);
 
-    followingButton = new QPushButton("", this);
+    followingButton = new QPushButton("0\nfollowing", this);
     followingButton->setFixedSize(80, 80);
     followingButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
-    followingButton->setText("0\nfollowing");
     followingButton->setCursor(Qt::PointingHandCursor);
     connect(followingButton, &QPushButton::clicked, this, &FeedWindow::onFollowingClicked);
-    headerLayout->addWidget(followingButton);
+    statsRow->addWidget(followingButton);
+
+    postsButton = new QPushButton("0\nposts", this);
+    postsButton->setFixedSize(80, 80);
+    postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }");
+    postsButton->setEnabled(false);
+    postsButton->setCursor(Qt::ArrowCursor);
+    statsRow->addWidget(postsButton);
+
+    statsRow->addStretch();
+    headerMainLayout->addLayout(statsRow);
+
+    followProfileButton = new QPushButton("", this);
+    followProfileButton->setFixedHeight(44);
+    followProfileButton->setMinimumWidth(width() - 80);
+    followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; font-size: 14px; }"
+                                       "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
+    followProfileButton->setCursor(Qt::PointingHandCursor);
+    followProfileButton->setVisible(false);
+    headerMainLayout->addWidget(followProfileButton, 0, Qt::AlignCenter);
 
     profileHeader->setVisible(false);
     mainLayout->addWidget(profileHeader);
@@ -542,8 +557,10 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     profileLoginLabel->setText(profile["login"].toString());
     int followers = profile["followersCount"].toInt();
     int following = profile["followingCount"].toInt();
+    int posts = profile["postsCount"].toInt();
     followersButton->setText(QString("%1\nfollowers").arg(followers));
     followingButton->setText(QString("%1\nfollowing").arg(following));
+    postsButton->setText(QString("%1\nposts").arg(posts));
 
     if (!isOwnProfile) {
         followProfileButton->setVisible(true);
@@ -848,6 +865,12 @@ void FeedWindow::onLikeDislike(const QString &postId, bool isLike) {
     });
 }
 
+void FeedWindow::updatePostReaction(const QString &postId, int newLikes, int newDislikes) {
+    if (m_postWidgets.contains(postId)) {
+        m_postWidgets[postId]->updateReactions(newLikes, newDislikes);
+    }
+}
+
 void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
     QUrl url(API_BASE_URL + endpoint);
     QNetworkRequest request(url);
@@ -865,9 +888,15 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                 dialog.setWindowTitle(title);
                 QVBoxLayout *layout = new QVBoxLayout(&dialog);
                 QListWidget *listWidget = new QListWidget(&dialog);
-                for (const auto &user : users) {
-                    QString login = user.toString();
-                    listWidget->addItem(login);
+                if (users.isEmpty()) {
+                    listWidget->addItem("No users found");
+                } else {
+                    for (const auto &user : users) {
+                        if (user.isObject()) {
+                            QString login = user.toObject()["login"].toString();
+                            listWidget->addItem(login);
+                        }
+                    }
                 }
                 layout->addWidget(listWidget);
                 QPushButton *closeBtn = new QPushButton("Close", &dialog);
@@ -882,12 +911,6 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
         }
         reply->deleteLater();
     });
-}
-
-void FeedWindow::updatePostReaction(const QString &postId, int newLikes, int newDislikes) {
-    if (m_postWidgets.contains(postId)) {
-        m_postWidgets[postId]->updateReactions(newLikes, newDislikes);
-    }
 }
 
 void FeedWindow::onFollowersClicked() {
