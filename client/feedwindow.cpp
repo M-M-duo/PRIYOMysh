@@ -41,6 +41,26 @@ static void showCustomMessage(QWidget *parent, const QString &text, const QStrin
     msgBox.exec();
 }
 
+static QString wrapText(const QString &text, int maxLineLength) {
+    QString result;
+    QString currentLine;
+    QStringList words = text.split(' ');
+    for (const QString &word : words) {
+        if (currentLine.isEmpty()) {
+            currentLine = word;
+        } else if (currentLine.length() + 1 + word.length() <= maxLineLength) {
+            currentLine += " " + word;
+        } else {
+            result += currentLine + "\n";
+            currentLine = word;
+        }
+    }
+    if (!currentLine.isEmpty()) {
+        result += currentLine;
+    }
+    return result;
+}
+
 class PostWidget : public QWidget {
 public:
     PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr)
@@ -92,7 +112,8 @@ public:
             mainLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
         }
 
-        contentLabel = new QLabel(post["content"].toString(), this);
+        QString wrappedContent = wrapText(post["content"].toString(), 58);
+        contentLabel = new QLabel(wrappedContent, this);
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
         contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
