@@ -2,10 +2,10 @@
 #define POSTDIALOG_H
 
 #include <QDialog>
-#include <QTextEdit>
-#include <QLineEdit>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
+#include <QTextEdit>
 #include <QVector>
 
 class PostDialog : public QDialog {
@@ -26,7 +26,7 @@ private slots:
 private:
     QTextEdit *descriptionEdit;
     QLineEdit *tagsEdit;
-    QVector<QLabel*> imageSlots;
+    QVector<QLabel *> imageSlots;
     QStringList imagesBase64;
     QPushButton *publishButton;
     QPushButton *cancelButton;

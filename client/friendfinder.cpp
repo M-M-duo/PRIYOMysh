@@ -35,7 +35,8 @@ static QString extractErrorMessage(QNetworkReply *reply) {
 }
 
 FriendFinder::FriendFinder(const QString &token, FeedWindow *parent)
-    : QDialog(parent), authToken(token), parentFeedWindow(parent), isFollowing(false), isMutual(false) {
+    : QDialog(parent), authToken(token), parentFeedWindow(parent), isFollowing(false),
+      isMutual(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
 }

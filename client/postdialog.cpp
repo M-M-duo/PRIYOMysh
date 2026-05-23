@@ -1,14 +1,14 @@
 #include "postdialog.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QFileDialog>
-#include <QImage>
 #include <QBuffer>
-#include <QRegularExpression>
+#include <QEvent>
+#include <QFileDialog>
+#include <QHBoxLayout>
+#include <QImage>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPixmap>
-#include <QEvent>
+#include <QRegularExpression>
+#include <QVBoxLayout>
 
 const int MAX_DESCRIPTION_LENGTH = 1000;
 
@@ -69,7 +69,7 @@ void PostDialog::onDescriptionChanged() {
 
 bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
     if (event->type() == QEvent::MouseButtonPress) {
-        int index = imageSlots.indexOf(static_cast<QLabel*>(obj));
+        int index = imageSlots.indexOf(static_cast<QLabel *>(obj));
         if (index != -1) {
             chooseImage(index);
             return true;
@@ -79,8 +79,10 @@ bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
 }
 
 void PostDialog::chooseImage(int index) {
-    QString filePath = QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
-    if (filePath.isEmpty()) return;
+    QString filePath =
+        QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
+    if (filePath.isEmpty())
+        return;
 
     QString base64 = cropAndToBase64(filePath);
     if (base64.isEmpty()) {
@@ -97,7 +99,8 @@ void PostDialog::chooseImage(int index) {
 
 QString PostDialog::cropAndToBase64(const QString &filePath) {
     QImage image(filePath);
-    if (image.isNull()) return QString();
+    if (image.isNull())
+        return QString();
 
     int size = qMin(image.width(), image.height());
     int x = (image.width() - size) / 2;
@@ -141,6 +144,7 @@ QStringList PostDialog::getImagesBase64() const {
 
 QStringList PostDialog::getTags() const {
     QString raw = tagsEdit->text().trimmed();
-    if (raw.isEmpty()) return QStringList();
+    if (raw.isEmpty())
+        return QStringList();
     return raw.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 }
