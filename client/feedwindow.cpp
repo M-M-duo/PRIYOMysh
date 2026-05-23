@@ -983,7 +983,7 @@ void FeedWindow::onEditProfileClicked() {
                 QString login = obj["login"].toString();
                 QString email = obj["email"].toString();
                 QString phone = obj["phone"].toString();
-                bool isPrivate = obj["isPrivate"].toBool();
+                bool isPrivate = obj["isPublic"].toBool();
                 EditProfileDialog dialog(login, email, phone, isPrivate, this);
                 connect(&dialog, &EditProfileDialog::profileUpdated, [this](const QString &login, const QString &email, const QString &phone, bool isPrivate) {
                     QUrl updateUrl(API_BASE_URL + "/api/users/me");
