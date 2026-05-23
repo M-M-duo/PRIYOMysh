@@ -118,7 +118,9 @@ public:
             }
         }
 
-        if (!cachedImages.isEmpty()) {
+        bool hasImages = !cachedImages.isEmpty();
+
+        if (hasImages) {
             imageLabel = new QLabel(this);
             imageLabel->setFixedSize(400, 400);
             imageLabel->setAlignment(Qt::AlignCenter);
@@ -140,7 +142,7 @@ public:
         actionRow->setContentsMargins(0, 5, 0, 5);
         actionRow->setSpacing(10);
 
-        if (!cachedImages.isEmpty()) {
+        if (hasImages) {
             prevButton = new QPushButton("◀", this);
             prevButton->setFixedSize(40, 40);
             prevButton->setEnabled(cachedImages.size() > 1 && currentImageIndex > 0);
@@ -160,12 +162,21 @@ public:
         actionRow->addWidget(likeButton);
         actionRow->addWidget(dislikeButton);
 
-        if (!cachedImages.isEmpty()) {
+        if (hasImages) {
             nextButton = new QPushButton("▶", this);
             nextButton->setFixedSize(40, 40);
             nextButton->setEnabled(cachedImages.size() > 1 &&
                                    currentImageIndex < cachedImages.size() - 1);
             actionRow->addWidget(nextButton);
+        } else {
+            actionRow->addStretch();
+            QString createdAt = post["createdAt"].toString();
+            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
+            if (!dt.isValid())
+                dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            dateLabel = new QLabel(dt.toString("dd.MM.yyyy HH:mm"), this);
+            dateLabel->setStyleSheet("color: #6c757d;");
+            actionRow->addWidget(dateLabel);
         }
 
         mainLayout->addLayout(actionRow);
@@ -184,14 +195,16 @@ public:
         tagsLabel->setAlignment(Qt::AlignCenter);
         mainLayout->addWidget(tagsLabel);
 
-        QString createdAt = post["createdAt"].toString();
-        QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
-        if (!dt.isValid())
-            dt = QDateTime::fromString(createdAt, Qt::ISODate);
-        dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"), this);
-        dateLabel->setStyleSheet("color: #6c757d;");
-        dateLabel->setAlignment(Qt::AlignCenter);
-        mainLayout->addWidget(dateLabel);
+        if (hasImages) {
+            QString createdAt = post["createdAt"].toString();
+            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
+            if (!dt.isValid())
+                dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"), this);
+            dateLabel->setStyleSheet("color: #6c757d;");
+            dateLabel->setAlignment(Qt::AlignCenter);
+            mainLayout->addWidget(dateLabel);
+        }
 
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
@@ -201,7 +214,7 @@ public:
 
         author = post["author"].toString();
 
-        if (!cachedImages.isEmpty()) {
+        if (hasImages) {
             connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
             connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
         }
@@ -1013,7 +1026,7 @@ void FeedWindow::onEditProfileClicked() {
                 QString login = obj["login"].toString();
                 QString email = obj["email"].toString();
                 QString phone = obj["phone"].toString();
-                bool isPrivate = obj["isPublic"].toBool();
+                bool isPrivate = obj["isPrivate"].toBool();
                 EditProfileDialog dialog(login, email, phone, isPrivate, this);
                 connect(
                     &dialog, &EditProfileDialog::profileUpdated,
@@ -1028,7 +1041,7 @@ void FeedWindow::onEditProfileClicked() {
                         updateJson["login"] = login;
                         updateJson["email"] = email;
                         updateJson["phone"] = phone;
-                        updateJson["isPrivate"] = isPrivate;
+                        updateJson["isPublic"] = !isPrivate;
                         QByteArray updateData = QJsonDocument(updateJson).toJson();
                         QNetworkReply *updateReply = networkManager->put(updateRequest, updateData);
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
