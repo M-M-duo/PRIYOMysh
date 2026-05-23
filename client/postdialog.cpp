@@ -22,7 +22,8 @@ void PostDialog::setupUI() {
 
     layout->addWidget(new QLabel("Description:"));
     descriptionEdit = new QTextEdit(this);
-    descriptionEdit->setMaximumHeight(100);
+    descriptionEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    descriptionEdit->setMinimumHeight(80);
     connect(descriptionEdit, &QTextEdit::textChanged, this, &PostDialog::onDescriptionChanged);
     layout->addWidget(descriptionEdit);
 

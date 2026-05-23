@@ -65,20 +65,7 @@ public:
         authorLabel->installEventFilter(this);
         authorLayout->addWidget(authorLabel);
         authorLayout->addStretch();
-
         mainLayout->addLayout(authorLayout);
-
-        QHBoxLayout *centerLayout = new QHBoxLayout();
-        centerLayout->setContentsMargins(0, 0, 0, 0);
-        centerLayout->addStretch();
-
-        QWidget *contentWidget = new QWidget(this);
-        QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
-        contentLayout->setSpacing(5);
-        contentLayout->setAlignment(Qt::AlignCenter);
-        contentWidget->setFixedWidth(440);
-
-        postId = post["id"].toString();
 
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray imagesArray = post["img"].toArray();
@@ -95,90 +82,106 @@ public:
             }
         }
 
-        if (!cachedImages.isEmpty()) {
+        bool hasImages = !cachedImages.isEmpty();
+        postId = post["id"].toString();
+
+        if (hasImages) {
             imageLabel = new QLabel(this);
             imageLabel->setFixedSize(400, 400);
             imageLabel->setAlignment(Qt::AlignCenter);
             imageLabel->setScaledContents(false);
             imageLabel->setStyleSheet("border: none; background-color: transparent;");
             updateImage();
-            contentLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
+            mainLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
         }
 
-        QHBoxLayout *descriptionRow = new QHBoxLayout();
-        descriptionRow->setContentsMargins(0, 0, 0, 0);
-        descriptionRow->setSpacing(5);
+        contentLabel = new QLabel(post["content"].toString(), this);
+        contentLabel->setWordWrap(true);
+        contentLabel->setAlignment(Qt::AlignCenter);
+        contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+        contentLabel->setMinimumHeight(20);
+        mainLayout->addWidget(contentLabel);
 
-        if (!cachedImages.isEmpty()) {
+        if (hasImages) {
+            QHBoxLayout *actionRow = new QHBoxLayout();
+            actionRow->setContentsMargins(0, 5, 0, 5);
+            actionRow->setSpacing(10);
+
             prevButton = new QPushButton("◀", this);
             prevButton->setFixedSize(40, 40);
             prevButton->setEnabled(cachedImages.size() > 1 && currentImageIndex > 0);
-            descriptionRow->addWidget(prevButton);
-        }
+            actionRow->addWidget(prevButton);
 
-        contentLabel = new QLabel(post["content"].toString());
-        contentLabel->setWordWrap(true);
-        contentLabel->setAlignment(Qt::AlignCenter);
-        contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-        descriptionRow->addWidget(contentLabel);
+            likeButton = new QPushButton(this);
+            dislikeButton = new QPushButton(this);
+            likeCount = post["likesCount"].toInt();
+            dislikeCount = post["dislikesCount"].toInt();
+            likeButton->setText(QString("🧀 %1").arg(likeCount));
+            dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            actionRow->addWidget(likeButton);
+            actionRow->addWidget(dislikeButton);
 
-        if (!cachedImages.isEmpty()) {
             nextButton = new QPushButton("▶", this);
             nextButton->setFixedSize(40, 40);
             nextButton->setEnabled(cachedImages.size() > 1 && currentImageIndex < cachedImages.size() - 1);
-            descriptionRow->addWidget(nextButton);
-        }
+            actionRow->addWidget(nextButton);
 
-        contentLayout->addLayout(descriptionRow);
+            mainLayout->addLayout(actionRow);
 
-        if (!cachedImages.isEmpty()) {
             connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
             connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
+        } else {
+            QHBoxLayout *infoRow = new QHBoxLayout();
+            infoRow->setContentsMargins(20, 5, 20, 5);
+            infoRow->setSpacing(10);
+
+            likeButton = new QPushButton(this);
+            dislikeButton = new QPushButton(this);
+            likeCount = post["likesCount"].toInt();
+            dislikeCount = post["dislikesCount"].toInt();
+            likeButton->setText(QString("🧀 %1").arg(likeCount));
+            dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+
+            infoRow->addWidget(likeButton);
+            infoRow->addWidget(dislikeButton);
+            infoRow->addStretch();
+
+            QString createdAt = post["createdAt"].toString();
+            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
+            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            dateLabel = new QLabel(dt.toString("dd.MM.yyyy HH:mm"), this);
+            dateLabel->setStyleSheet("color: #6c757d;");
+            infoRow->addWidget(dateLabel);
+
+            mainLayout->addLayout(infoRow);
         }
 
         QString tagsStr;
         if (post.contains("tags") && post["tags"].isArray()) {
             QJsonArray tagsArr = post["tags"].toArray();
             for (const auto &tag : tagsArr) {
-                if (!tagsStr.isEmpty())
-                    tagsStr += " ";
+                if (!tagsStr.isEmpty()) tagsStr += " ";
                 tagsStr += "#" + tag.toString();
             }
         }
         tagsLabel = new QLabel(tagsStr);
         tagsLabel->setStyleSheet("color: #007bff;");
         tagsLabel->setAlignment(Qt::AlignCenter);
-        contentLayout->addWidget(tagsLabel);
+        mainLayout->addWidget(tagsLabel);
 
-        QString createdAt = post["createdAt"].toString();
-        QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
-        if (!dt.isValid())
-            dt = QDateTime::fromString(createdAt, Qt::ISODate);
-        dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"));
-        dateLabel->setStyleSheet("color: #6c757d;");
-        dateLabel->setAlignment(Qt::AlignCenter);
-        contentLayout->addWidget(dateLabel);
-
-        QHBoxLayout *actionLayout = new QHBoxLayout();
-        actionLayout->setAlignment(Qt::AlignCenter);
-        likeButton = new QPushButton(this);
-        dislikeButton = new QPushButton(this);
-        likeCount = post["likesCount"].toInt();
-        dislikeCount = post["dislikesCount"].toInt();
-        likeButton->setText(QString("🧀 %1").arg(likeCount));
-        dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
-        likeButton->setStyleSheet("QPushButton { background-color: transparent; "
-                                  "border: none; font-size: 16px; padding: 4px; }");
-        dislikeButton->setStyleSheet(
-            "QPushButton { background-color: transparent; border: none; font-size: "
-            "16px; padding: 4px; }");
-        actionLayout->addWidget(likeButton);
-        actionLayout->addWidget(dislikeButton);
-        contentLayout->addLayout(actionLayout);
-
-        centerLayout->addWidget(contentWidget);
-        centerLayout->addStretch();
-        mainLayout->addLayout(centerLayout);
+        if (hasImages) {
+            QString createdAt = post["createdAt"].toString();
+            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
+            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"), this);
+            dateLabel->setStyleSheet("color: #6c757d;");
+            dateLabel->setAlignment(Qt::AlignCenter);
+            mainLayout->addWidget(dateLabel);
+        }
 
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
@@ -188,14 +191,21 @@ public:
 
         author = post["author"].toString();
 
-        connect(likeButton, &QPushButton::clicked, [this]() {
-            if (feedWindow)
-                feedWindow->onLikeDislike(postId, true);
-        });
-        connect(dislikeButton, &QPushButton::clicked, [this]() {
-            if (feedWindow)
-                feedWindow->onLikeDislike(postId, false);
-        });
+        if (hasImages) {
+            connect(likeButton, &QPushButton::clicked, [this]() {
+                if (feedWindow) feedWindow->onLikeDislike(postId, true);
+            });
+            connect(dislikeButton, &QPushButton::clicked, [this]() {
+                if (feedWindow) feedWindow->onLikeDislike(postId, false);
+            });
+        } else {
+            connect(likeButton, &QPushButton::clicked, [this]() {
+                if (feedWindow) feedWindow->onLikeDislike(postId, true);
+            });
+            connect(dislikeButton, &QPushButton::clicked, [this]() {
+                if (feedWindow) feedWindow->onLikeDislike(postId, false);
+            });
+        }
     }
 
     void updateReactions(int likes, int dislikes) {
@@ -225,8 +235,7 @@ private slots:
 
 private:
     void updateImage() {
-        if (cachedImages.isEmpty())
-            return;
+        if (cachedImages.isEmpty()) return;
         imageLabel->setPixmap(cachedImages[currentImageIndex]);
     }
 
@@ -308,7 +317,7 @@ void FeedWindow::setupUI() {
 
     followersButton = new QPushButton("0\nfollowers", this);
     followersButton->setFixedSize(80, 80);
-    followersButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white;}"
+    followersButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
     followersButton->setCursor(Qt::PointingHandCursor);
     connect(followersButton, &QPushButton::clicked, this, &FeedWindow::onFollowersClicked);
@@ -316,7 +325,7 @@ void FeedWindow::setupUI() {
 
     followingButton = new QPushButton("0\nfollowing", this);
     followingButton->setFixedSize(80, 80);
-    followingButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white; }"
+    followingButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
     followingButton->setCursor(Qt::PointingHandCursor);
     connect(followingButton, &QPushButton::clicked, this, &FeedWindow::onFollowingClicked);
@@ -324,7 +333,7 @@ void FeedWindow::setupUI() {
 
     postsButton = new QPushButton("0\nposts", this);
     postsButton->setFixedSize(80, 80);
-    postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white; }");
+    postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: #888; }");
     postsButton->setEnabled(false);
     postsButton->setCursor(Qt::ArrowCursor);
     statsRow->addWidget(postsButton);
