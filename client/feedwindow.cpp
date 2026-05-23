@@ -130,52 +130,80 @@ public:
             mainLayout->addWidget(imageLabel, 0, Qt::AlignCenter);
         }
 
-        QHBoxLayout *actionRow = new QHBoxLayout();
-        actionRow->setContentsMargins(0, 5, 0, 5);
-        actionRow->setSpacing(10);
-
         if (hasImages) {
+            QHBoxLayout *actionRow = new QHBoxLayout();
+            actionRow->setContentsMargins(0, 5, 0, 5);
+            actionRow->setSpacing(0);
+
+            actionRow->addStretch();
+
             prevButton = new QPushButton("◀", this);
             prevButton->setFixedSize(40, 40);
             prevButton->setEnabled(cachedImages.size() > 1 && currentImageIndex > 0);
             actionRow->addWidget(prevButton);
-        }
 
-        likeButton = new QPushButton(this);
-        dislikeButton = new QPushButton(this);
-        likeCount = post["likesCount"].toInt();
-        dislikeCount = post["dislikesCount"].toInt();
-        likeButton->setText(QString("🧀 %1").arg(likeCount));
-        dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
-        likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
-        dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
-        actionRow->addWidget(likeButton);
-        actionRow->addWidget(dislikeButton);
+            actionRow->addStretch();
 
-        if (hasImages) {
+            likeButton = new QPushButton(this);
+            dislikeButton = new QPushButton(this);
+            likeCount = post["likesCount"].toInt();
+            dislikeCount = post["dislikesCount"].toInt();
+            likeButton->setText(QString("🧀 %1").arg(likeCount));
+            dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+
+            QHBoxLayout *likesLayout = new QHBoxLayout();
+            likesLayout->setSpacing(10);
+            likesLayout->addWidget(likeButton);
+            likesLayout->addWidget(dislikeButton);
+            actionRow->addLayout(likesLayout);
+
+            actionRow->addStretch();
+
             nextButton = new QPushButton("▶", this);
             nextButton->setFixedSize(40, 40);
             nextButton->setEnabled(cachedImages.size() > 1 && currentImageIndex < cachedImages.size() - 1);
             actionRow->addWidget(nextButton);
-        } else {
-            actionRow->addStretch();
-            QString createdAt = post["createdAt"].toString();
-            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
-            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
-            dateLabel = new QLabel(dt.toString("dd.MM.yyyy HH:mm"), this);
-            dateLabel->setStyleSheet("color: #6c757d;");
-            actionRow->addWidget(dateLabel);
-        }
 
-        mainLayout->addLayout(actionRow);
+            actionRow->addStretch();
+
+            mainLayout->addLayout(actionRow);
+        }
 
         QString wrappedContent = wrapText(post["content"].toString(), 58);
         contentLabel = new QLabel(wrappedContent, this);
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
-        contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
-        contentLabel->setMinimumHeight(20);
         mainLayout->addWidget(contentLabel);
+
+        if (!hasImages) {
+            QHBoxLayout *infoRow = new QHBoxLayout();
+            infoRow->setContentsMargins(20, 5, 20, 5);
+            infoRow->setSpacing(10);
+
+            likeButton = new QPushButton(this);
+            dislikeButton = new QPushButton(this);
+            likeCount = post["likesCount"].toInt();
+            dislikeCount = post["dislikesCount"].toInt();
+            likeButton->setText(QString("🧀 %1").arg(likeCount));
+            dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+
+            infoRow->addWidget(likeButton);
+            infoRow->addWidget(dislikeButton);
+            infoRow->addStretch();
+
+            QString createdAt = post["createdAt"].toString();
+            QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
+            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            dateLabel = new QLabel(dt.toString("dd.MM.yyyy HH:mm"), this);
+            dateLabel->setStyleSheet("color: #6c757d;");
+            infoRow->addWidget(dateLabel);
+
+            mainLayout->addLayout(infoRow);
+        }
 
         QString tagsStr;
         if (post.contains("tags") && post["tags"].isArray()) {
@@ -377,6 +405,7 @@ void FeedWindow::setupUI() {
     postsLayout->setSpacing(0);
     postsLayout->setContentsMargins(0, 0, 0, 0);
     scrollWidget->setLayout(postsLayout);
+    scrollWidget->adjustSize();
     scrollArea->setWidget(scrollWidget);
     scrollArea->setWidgetResizable(true);
     mainLayout->addWidget(scrollArea);
