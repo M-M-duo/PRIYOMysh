@@ -10,6 +10,8 @@
 #include <QPixmap>
 #include <QEvent>
 
+const int MAX_DESCRIPTION_LENGTH = 1000;
+
 PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
     setupUI();
 }
@@ -21,15 +23,7 @@ void PostDialog::setupUI() {
     layout->addWidget(new QLabel("Description:"));
     descriptionEdit = new QTextEdit(this);
     descriptionEdit->setMaximumHeight(100);
-    connect(descriptionEdit, &QTextEdit::textChanged, [this]() {
-        if (descriptionEdit->toPlainText().length() > 1000) {
-            QString text = descriptionEdit->toPlainText();
-            text.truncate(1000);
-            descriptionEdit->blockSignals(true);
-            descriptionEdit->setPlainText(text);
-            descriptionEdit->blockSignals(false);
-        }
-    });
+    connect(descriptionEdit, &QTextEdit::textChanged, this, &PostDialog::onDescriptionChanged);
     layout->addWidget(descriptionEdit);
 
     layout->addWidget(new QLabel("Images (max 10):"));
@@ -59,6 +53,17 @@ void PostDialog::setupUI() {
 
     connect(publishButton, &QPushButton::clicked, this, &QDialog::accept);
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+}
+
+void PostDialog::onDescriptionChanged() {
+    QString currentText = descriptionEdit->toPlainText();
+    if (currentText.length() > MAX_DESCRIPTION_LENGTH) {
+        descriptionEdit->blockSignals(true);
+        descriptionEdit->setPlainText(lastValidDescription);
+        descriptionEdit->blockSignals(false);
+    } else {
+        lastValidDescription = currentText;
+    }
 }
 
 bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
