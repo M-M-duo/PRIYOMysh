@@ -46,17 +46,33 @@ static QString wrapText(const QString &text, int maxLineLength) {
     QString currentLine;
     QStringList words = text.split(' ');
     for (const QString &word : words) {
-        if (currentLine.isEmpty()) {
-            currentLine = word;
-        } else if (currentLine.length() + 1 + word.length() <= maxLineLength) {
-            currentLine += " " + word;
+        if (word.length() > maxLineLength) {
+            if (!currentLine.isEmpty()) {
+                result += currentLine + "\n";
+                currentLine.clear();
+            }
+            int pos = 0;
+            while (pos < word.length()) {
+                QString part = word.mid(pos, maxLineLength);
+                result += part + "\n";
+                pos += maxLineLength;
+            }
         } else {
-            result += currentLine + "\n";
-            currentLine = word;
+            if (currentLine.isEmpty()) {
+                currentLine = word;
+            } else if (currentLine.length() + 1 + word.length() <= maxLineLength) {
+                currentLine += " " + word;
+            } else {
+                result += currentLine + "\n";
+                currentLine = word;
+            }
         }
     }
     if (!currentLine.isEmpty()) {
         result += currentLine;
+    }
+    if (result.endsWith("\n")) {
+        result.chop(1);
     }
     return result;
 }
