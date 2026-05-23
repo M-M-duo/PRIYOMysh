@@ -2,6 +2,7 @@
 #include "friendfinder.h"
 #include "mainwindow.h"
 #include "postdialog.h"
+#include "editprofiledialog.h"
 #include <QDateTime>
 #include <QDebug>
 #include <QDialog>
@@ -49,6 +50,24 @@ public:
         mainLayout->setContentsMargins(0, 5, 0, 5);
         mainLayout->setAlignment(Qt::AlignCenter);
 
+        QHBoxLayout *authorLayout = new QHBoxLayout();
+        authorLayout->setContentsMargins(20, 0, 20, 0);
+        authorLayout->setSpacing(10);
+
+        QLabel *avatarLabel = new QLabel(this);
+        avatarLabel->setFixedSize(24, 24);
+        avatarLabel->setStyleSheet("border-radius: 12px; background-color: #cccccc;");
+        authorLayout->addWidget(avatarLabel);
+
+        authorLabel = new QLabel(post["author"].toString(), this);
+        authorLabel->setStyleSheet("font-weight: bold; color: white; text-decoration: none;");
+        authorLabel->setCursor(Qt::PointingHandCursor);
+        authorLabel->installEventFilter(this);
+        authorLayout->addWidget(authorLabel);
+        authorLayout->addStretch();
+
+        mainLayout->addLayout(authorLayout);
+
         QHBoxLayout *centerLayout = new QHBoxLayout();
         centerLayout->setContentsMargins(0, 0, 0, 0);
         centerLayout->addStretch();
@@ -60,14 +79,6 @@ public:
         contentWidget->setFixedWidth(440);
 
         postId = post["id"].toString();
-
-        authorLabel = new QLabel(post["author"].toString());
-        authorLabel->setStyleSheet(
-            "font-weight: bold; color: #007bff; text-decoration: underline;");
-        authorLabel->setCursor(Qt::PointingHandCursor);
-        authorLabel->installEventFilter(this);
-        authorLabel->setAlignment(Qt::AlignCenter);
-        contentLayout->addWidget(authorLabel);
 
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray imagesArray = post["img"].toArray();
@@ -108,15 +119,13 @@ public:
         contentLabel = new QLabel(post["content"].toString());
         contentLabel->setWordWrap(true);
         contentLabel->setAlignment(Qt::AlignCenter);
-        contentLabel->setMinimumHeight(80);
         contentLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
         descriptionRow->addWidget(contentLabel);
 
         if (!cachedImages.isEmpty()) {
             nextButton = new QPushButton("▶", this);
             nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(cachedImages.size() > 1 &&
-                                   currentImageIndex < cachedImages.size() - 1);
+            nextButton->setEnabled(cachedImages.size() > 1 && currentImageIndex < cachedImages.size() - 1);
             descriptionRow->addWidget(nextButton);
         }
 
@@ -274,7 +283,6 @@ void FeedWindow::setupUI() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Profile header
     profileHeader = new QWidget(this);
     QVBoxLayout *headerMainLayout = new QVBoxLayout(profileHeader);
     headerMainLayout->setSpacing(10);
@@ -300,7 +308,7 @@ void FeedWindow::setupUI() {
 
     followersButton = new QPushButton("0\nfollowers", this);
     followersButton->setFixedSize(80, 80);
-    followersButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
+    followersButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white;}"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
     followersButton->setCursor(Qt::PointingHandCursor);
     connect(followersButton, &QPushButton::clicked, this, &FeedWindow::onFollowersClicked);
@@ -308,7 +316,7 @@ void FeedWindow::setupUI() {
 
     followingButton = new QPushButton("0\nfollowing", this);
     followingButton->setFixedSize(80, 80);
-    followingButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; }"
+    followingButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white; }"
                                    "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
     followingButton->setCursor(Qt::PointingHandCursor);
     connect(followingButton, &QPushButton::clicked, this, &FeedWindow::onFollowingClicked);
@@ -316,7 +324,7 @@ void FeedWindow::setupUI() {
 
     postsButton = new QPushButton("0\nposts", this);
     postsButton->setFixedSize(80, 80);
-    postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: #888; }");
+    postsButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 8px; color: white; }");
     postsButton->setEnabled(false);
     postsButton->setCursor(Qt::ArrowCursor);
     statsRow->addWidget(postsButton);
@@ -579,9 +587,12 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (isOwnProfile || isMe) {
         followProfileButton->setVisible(true);
-        followProfileButton->setText("it's you");
-        followProfileButton->setEnabled(false);
-        followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; font-size: 14px; color: #888; }");
+        followProfileButton->setText("Edit profile");
+        followProfileButton->setEnabled(true);
+        followProfileButton->setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; font-size: 14px; }"
+                                           "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
+        disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
+        connect(followProfileButton, &QPushButton::clicked, this, &FeedWindow::onEditProfileClicked);
     } else {
         followProfileButton->setVisible(true);
         bool isFollowing = profile["isFollowing"].toBool();
@@ -945,6 +956,55 @@ void FeedWindow::onFollowingClicked() {
     }
     QString endpoint = QString("/api/friends/%1/following").arg(login);
     showUserList("Following", endpoint);
+}
+
+void FeedWindow::onEditProfileClicked() {
+    QUrl url(API_BASE_URL + "/api/users/me");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QNetworkReply *reply = networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray response = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(response);
+            if (doc.isObject()) {
+                QJsonObject obj = doc.object();
+                QString login = obj["login"].toString();
+                QString email = obj["email"].toString();
+                QString phone = obj["phone"].toString();
+                bool isPrivate = obj["isPrivate"].toBool();
+                EditProfileDialog dialog(login, email, phone, isPrivate, this);
+                connect(&dialog, &EditProfileDialog::profileUpdated, [this](const QString &login, const QString &email, const QString &phone, bool isPrivate) {
+                    QUrl updateUrl(API_BASE_URL + "/api/users/me");
+                    QNetworkRequest updateRequest(updateUrl);
+                    updateRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+                    updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+                    QJsonObject updateJson;
+                    updateJson["login"] = login;
+                    updateJson["email"] = email;
+                    updateJson["phone"] = phone;
+                    updateJson["isPrivate"] = isPrivate;
+                    QByteArray updateData = QJsonDocument(updateJson).toJson();
+                    QNetworkReply *updateReply = networkManager->put(updateRequest, updateData);
+                    connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
+                        if (updateReply->error() == QNetworkReply::NoError) {
+                            showCustomMessage(this, "Profile updated", ":/sources/warn_happy.png");
+                            loadMyProfile();
+                        } else {
+                            showCustomMessage(this, "Update failed: " + updateReply->errorString(), ":/sources/warning_01.png");
+                        }
+                        updateReply->deleteLater();
+                    });
+                });
+                dialog.exec();
+            }
+        } else {
+            showCustomMessage(this, "Failed to load profile data", ":/sources/warning_01.png");
+        }
+        reply->deleteLater();
+    });
 }
 
 void FeedWindow::showError(const QString &message) {

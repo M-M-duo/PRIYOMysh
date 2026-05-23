@@ -46,6 +46,7 @@ private slots:
     void onMyLoginFinished(QNetworkReply *reply);
     void onFollowersClicked();
     void onFollowingClicked();
+    void onEditProfileClicked();
 
 private:
     QNetworkAccessManager *networkManager;

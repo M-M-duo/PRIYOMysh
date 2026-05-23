@@ -1,14 +1,14 @@
 #include "postdialog.h"
-#include <QBuffer>
-#include <QEvent>
-#include <QFileDialog>
+#include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QImage>
 #include <QLabel>
+#include <QFileDialog>
+#include <QImage>
+#include <QBuffer>
+#include <QRegularExpression>
 #include <QMessageBox>
 #include <QPixmap>
-#include <QRegularExpression>
-#include <QVBoxLayout>
+#include <QEvent>
 
 PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
     setupUI();
@@ -21,6 +21,15 @@ void PostDialog::setupUI() {
     layout->addWidget(new QLabel("Description:"));
     descriptionEdit = new QTextEdit(this);
     descriptionEdit->setMaximumHeight(100);
+    connect(descriptionEdit, &QTextEdit::textChanged, [this]() {
+        if (descriptionEdit->toPlainText().length() > 1000) {
+            QString text = descriptionEdit->toPlainText();
+            text.truncate(1000);
+            descriptionEdit->blockSignals(true);
+            descriptionEdit->setPlainText(text);
+            descriptionEdit->blockSignals(false);
+        }
+    });
     layout->addWidget(descriptionEdit);
 
     layout->addWidget(new QLabel("Images (max 10):"));
@@ -54,7 +63,7 @@ void PostDialog::setupUI() {
 
 bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
     if (event->type() == QEvent::MouseButtonPress) {
-        int index = imageSlots.indexOf(static_cast<QLabel *>(obj));
+        int index = imageSlots.indexOf(static_cast<QLabel*>(obj));
         if (index != -1) {
             chooseImage(index);
             return true;
@@ -64,10 +73,8 @@ bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
 }
 
 void PostDialog::chooseImage(int index) {
-    QString filePath =
-        QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
-    if (filePath.isEmpty())
-        return;
+    QString filePath = QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
+    if (filePath.isEmpty()) return;
 
     QString base64 = cropAndToBase64(filePath);
     if (base64.isEmpty()) {
@@ -84,8 +91,7 @@ void PostDialog::chooseImage(int index) {
 
 QString PostDialog::cropAndToBase64(const QString &filePath) {
     QImage image(filePath);
-    if (image.isNull())
-        return QString();
+    if (image.isNull()) return QString();
 
     int size = qMin(image.width(), image.height());
     int x = (image.width() - size) / 2;
@@ -100,7 +106,7 @@ QString PostDialog::cropAndToBase64(const QString &filePath) {
     QByteArray byteArray;
     QBuffer buffer(&byteArray);
     buffer.open(QIODevice::WriteOnly);
-    cropped.save(&buffer, "JPEG", 70);
+    cropped.save(&buffer, "JPEG", 85);
     buffer.close();
 
     return QString::fromLatin1(byteArray.toBase64());
@@ -129,7 +135,6 @@ QStringList PostDialog::getImagesBase64() const {
 
 QStringList PostDialog::getTags() const {
     QString raw = tagsEdit->text().trimmed();
-    if (raw.isEmpty())
-        return QStringList();
+    if (raw.isEmpty()) return QStringList();
     return raw.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 }
