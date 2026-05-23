@@ -173,7 +173,7 @@ void MainWindow::sendAuthRequest(const QString &login, const QString &password,
     json["password"] = password;
     json["email"] = email;
     json["phone"] = phone;
-    json["isPrivate"] = isPrivate;
+    json["isPrivate"] = !isPrivate;
     json["image"] = "";
 
     QByteArray data = QJsonDocument(json).toJson();
