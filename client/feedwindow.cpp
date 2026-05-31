@@ -1064,7 +1064,7 @@ void FeedWindow::onFollowingClicked() {
 
 void FeedWindow::onEditProfileClicked() {
     qDebug().noquote() << "=== Edit Profile: Fetching current profile data ===";
-    QUrl url(API_BASE_URL + "/api/me/profile");
+    QUrl url(API_BASE_URL + "/api/profiles/me");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
