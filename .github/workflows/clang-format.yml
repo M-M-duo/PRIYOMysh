@@ -7,12 +7,17 @@ on:
 jobs:
   formatting-check:
     name: Check code style
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+    - name: Install clang-format-17
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo add-apt-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+        sudo apt-get update
+        sudo apt-get install -y clang-format-17
     - name: Run clang-format
-      uses: jidicula/clang-format-action@v4.0.0
-      with:
-        clang-format-version: '17'
-        check-path: '.'
-        exclude-regex: 'build/|third_party/'
+      run: |
+        find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path './build/*' -not -path './third_party/*' | xargs clang-format-17 --dry-run --Werror
