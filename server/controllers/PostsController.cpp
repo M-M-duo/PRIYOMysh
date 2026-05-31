@@ -1,19 +1,16 @@
 #include "PostsController.hpp"
+#include "helpers.hpp"
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpTypes.h>
-#include <trantor/utils/Date.h>
 #include <iomanip>
 #include <sstream>
-#include "helpers.hpp"
+#include <trantor/utils/Date.h>
 
 using namespace drogon;
 
-static void fetchPost(
-    const std::string &postId,
-    const std::string &currentLogin,
-    std::function<void(const Json::Value &, int)> callback
-) {
+static void fetchPost(const std::string &postId, const std::string &currentLogin,
+                      std::function<void(const Json::Value &, int)> callback) {
     auto db = getDbClient();
     db->execSqlAsync(
         R"sql(SELECT p.*, u.is_public as author_public, 
@@ -43,8 +40,7 @@ static void fetchPost(
                 db->execSqlAsync(
                     R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
                                  AND id_friend = (SELECT id FROM users WHERE login = $2)sql",
-                    [callback, row, tags,
-                     author](const drogon::orm::Result &r) {
+                    [callback, row, tags, author](const drogon::orm::Result &r) {
                         if (r.empty()) {
                             callback(Json::Value(), 404);
                             return;
@@ -55,8 +51,7 @@ static void fetchPost(
                         callback(Json::Value(), 500);
                         return;
                     },
-                    author, currentLogin
-                );
+                    author, currentLogin);
             }
 
             Json::Value post;
@@ -85,8 +80,7 @@ static void fetchPost(
             LOG_ERROR << e.base().what();
             callback(Json::Value(), 500);
         },
-        postId
-    );
+        postId);
 }
 
 static std::pair<int, int> parseLimitOffset(const drogon::HttpRequestPtr &req) {
@@ -143,8 +137,7 @@ static Json::Value buildPostsJson(const drogon::orm::Result &r) {
 
 static auto sendPostsResponse(Callback callback) {
     return [callback](const drogon::orm::Result &r) {
-        auto resp =
-            drogon::HttpResponse::newHttpJsonResponse(buildPostsJson(r));
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(buildPostsJson(r));
         resp->setStatusCode(k200OK);
         callback(resp);
     };
@@ -201,14 +194,9 @@ static void sendInternalError(Callback callback) {
     callback(resp);
 }
 
-static void saveImages(
-    int postId,
-    const Json::Value &imgArray,
-    const Json::Value &postJson,
-    std::function<void(const drogon::HttpResponsePtr &)> callback
-) {
-    LOG_INFO << "saveImages called, postId=" << postId
-             << ", imgArray size=" << imgArray.size();
+static void saveImages(int postId, const Json::Value &imgArray, const Json::Value &postJson,
+                       std::function<void(const drogon::HttpResponsePtr &)> callback) {
+    LOG_INFO << "saveImages called, postId=" << postId << ", imgArray size=" << imgArray.size();
     try {
         if (imgArray.empty()) {
             LOG_INFO << "No images, sending response";
@@ -249,8 +237,7 @@ static void saveImages(
                     sendInternalError(callback);
                     return;
                 },
-                postId, filePath
-            );
+                postId, filePath);
         }
         LOG_INFO << "All images saved, sending response";
         auto resp = drogon::HttpResponse::newHttpJsonResponse(postJson);
@@ -324,8 +311,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
         db->execSqlAsync(
             R"sql(INSERT INTO posts (content, author, created_at) VALUES ($1, $2, 
             CURRENT_TIMESTAMP) RETURNING id, id_uuid, created_at)sql",
-            [callback, tags, login, content,
-             imgArray](const drogon::orm::Result &r) {
+            [callback, tags, login, content, imgArray](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     Json::Value ret;
                     ret["reason"] = "Post creation failed";
@@ -340,14 +326,12 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
 
                 auto db2 = getDbClient();
                 for (const auto &tag : tags) {
-                    db2->execSqlAsync(
-                        R"sql(INSERT INTO tags (id_post, tag) VALUES ($1, $2))sql",
-                        [](const drogon::orm::Result &) {},
-                        [](const drogon::orm::DrogonDbException &e) {
-                            LOG_ERROR << e.base().what();
-                        },
-                        postId, tag.asString()
-                    );
+                    db2->execSqlAsync(R"sql(INSERT INTO tags (id_post, tag) VALUES ($1, $2))sql",
+                                      [](const drogon::orm::Result &) {},
+                                      [](const drogon::orm::DrogonDbException &e) {
+                                          LOG_ERROR << e.base().what();
+                                      },
+                                      postId, tag.asString());
                 }
 
                 Json::Value post;
@@ -372,44 +356,33 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                 resp->setStatusCode(k500InternalServerError);
                 callback(resp);
             },
-            content, login
-        );
+            content, login);
     });
 }
 
-void PostsController::getPost(
-    const HttpRequestPtr &req,
-    Callback &&callback,
-    std::string postId
-) {
-    verifyToken(
-        req,
-        [callback, req, postId](std::optional<std::string> loginOpt) {
-            if (!loginOpt) {
-                sendUnauthorized(callback);
+void PostsController::getPost(const HttpRequestPtr &req, Callback &&callback, std::string postId) {
+    verifyToken(req, [callback, req, postId](std::optional<std::string> loginOpt) {
+        if (!loginOpt) {
+            sendUnauthorized(callback);
+            return;
+        }
+        std::string currentLogin = *loginOpt;
+
+        fetchPost(postId, currentLogin, [callback, postId](const Json::Value &post, int status) {
+            if (status == 404) {
+                sendNotFound("The post is not found", callback);
                 return;
             }
-            std::string currentLogin = *loginOpt;
-
-            fetchPost(
-                postId, currentLogin,
-                [callback, postId](const Json::Value &post, int status) {
-                    if (status == 404) {
-                        sendNotFound("The post is not found", callback);
-                        return;
-                    }
-                    if (status != 200) {
-                        sendInternalError(callback);
-                        return;
-                    }
-                    // здесь потом добавить подсчет лайков
-                    auto resp = HttpResponse::newHttpJsonResponse(post);
-                    resp->setStatusCode(k200OK);
-                    callback(resp);
-                }
-            );
-        }
-    );
+            if (status != 200) {
+                sendInternalError(callback);
+                return;
+            }
+            // здесь потом добавить подсчет лайков
+            auto resp = HttpResponse::newHttpJsonResponse(post);
+            resp->setStatusCode(k200OK);
+            callback(resp);
+        });
+    });
 }
 
 void PostsController::myFeed(const HttpRequestPtr &req, Callback &&callback) {
@@ -438,65 +411,53 @@ void PostsController::myFeed(const HttpRequestPtr &req, Callback &&callback) {
                 ORDER BY p.created_at DESC
                 LIMIT $2 OFFSET $3
             )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback),
-            currentLogin, std::to_string(limit), std::to_string(offset)
-        );
+            sendPostsResponse(callback), sendDbErrorResponse(callback), currentLogin,
+            std::to_string(limit), std::to_string(offset));
     });
 }
 
-void PostsController::userFeed(
-    const HttpRequestPtr &req,
-    Callback &&callback,
-    std::string login
-) {
-    verifyToken(
-        req,
-        [callback, req, login](std::optional<std::string> currentLoginOpt) {
-            if (!currentLoginOpt) {
-                sendUnauthorized(callback);
-                return;
-            }
-            std::string currentLogin = *currentLoginOpt;
-            auto [lim, off] = parseLimitOffset(req);
-            int limit = lim, offset = off;
+void PostsController::userFeed(const HttpRequestPtr &req, Callback &&callback, std::string login) {
+    verifyToken(req, [callback, req, login](std::optional<std::string> currentLoginOpt) {
+        if (!currentLoginOpt) {
+            sendUnauthorized(callback);
+            return;
+        }
+        std::string currentLogin = *currentLoginOpt;
+        auto [lim, off] = parseLimitOffset(req);
+        int limit = lim, offset = off;
 
-            if (limit < 0 || offset < 0) {
-                sendBadRequest("limit or offset is incorrect", callback);
-                return;
-            }
+        if (limit < 0 || offset < 0) {
+            sendBadRequest("limit or offset is incorrect", callback);
+            return;
+        }
 
-            auto db = getDbClient();
-            db->execSqlAsync(
-                R"sql(SELECT is_public FROM users WHERE login = $1)sql",
-                [callback, db, currentLogin, login, limit,
-                 offset](const drogon::orm::Result &r) {
-                    if (r.empty()) {
-                        sendNotFound("User not found", callback);
-                        return;
-                    }
-                    bool isPublic = r[0]["is_public"].as<bool>();
+        auto db = getDbClient();
+        db->execSqlAsync(
+            R"sql(SELECT is_public FROM users WHERE login = $1)sql",
+            [callback, db, currentLogin, login, limit, offset](const drogon::orm::Result &r) {
+                if (r.empty()) {
+                    sendNotFound("User not found", callback);
+                    return;
+                }
+                bool isPublic = r[0]["is_public"].as<bool>();
 
-                    if (currentLogin != login && !isPublic) {
-                        db->execSqlAsync(
-                            R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
-                                    AND id_friend = (SELECT id FROM users WHERE login = $2))sql",
-                            [callback, currentLogin,
-                             login](const drogon::orm::Result &r) {
-                                if (r.empty()) {
-                                    sendForbidden(
-                                        "You are not allowed to see this "
-                                        "profile",
-                                        callback
-                                    );
-                                    return;
-                                }
-                            },
-                            sendDbErrorResponse(callback), login, currentLogin
-                        );
-                    }
-
+                if (currentLogin != login && !isPublic) {
                     db->execSqlAsync(
-                        R"sql(
+                        R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
+                                    AND id_friend = (SELECT id FROM users WHERE login = $2))sql",
+                        [callback, currentLogin, login](const drogon::orm::Result &r) {
+                            if (r.empty()) {
+                                sendForbidden("You are not allowed to see this "
+                                              "profile",
+                                              callback);
+                                return;
+                            }
+                        },
+                        sendDbErrorResponse(callback), login, currentLogin);
+                }
+
+                db->execSqlAsync(
+                    R"sql(
                         SELECT p.id_uuid, p.content, p.author, p.created_at,
                                (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
                                (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images
@@ -505,21 +466,14 @@ void PostsController::userFeed(
                         ORDER BY p.created_at DESC
                         LIMIT $2::integer OFFSET $3::integer
                     )sql",
-                        sendPostsResponse(callback),
-                        sendDbErrorResponse(callback), login,
-                        std::to_string(limit), std::to_string(offset)
-                    );
-                },
-                sendDbErrorResponse(callback), login
-            );
-        }
-    );
+                    sendPostsResponse(callback), sendDbErrorResponse(callback), login,
+                    std::to_string(limit), std::to_string(offset));
+            },
+            sendDbErrorResponse(callback), login);
+    });
 }
 
-void PostsController::newsFriendsFeed(
-    const HttpRequestPtr &req,
-    Callback &&callback
-) {
+void PostsController::newsFriendsFeed(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
             sendUnauthorized(callback);
@@ -562,9 +516,8 @@ void PostsController::newsFriendsFeed(
                 ORDER BY p.created_at DESC
                 LIMIT $1 OFFSET $2
             )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback),
-            std::to_string(limit), std::to_string(offset), currentLogin
-        );
+            sendPostsResponse(callback), sendDbErrorResponse(callback), std::to_string(limit),
+            std::to_string(offset), currentLogin);
     });
 }
 
@@ -601,8 +554,7 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
                 ORDER BY p.created_at DESC
                 LIMIT $1 OFFSET $2
             )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback),
-            std::to_string(limit), std::to_string(offset), currentLogin
-        );
+            sendPostsResponse(callback), sendDbErrorResponse(callback), std::to_string(limit),
+            std::to_string(offset), currentLogin);
     });
 }

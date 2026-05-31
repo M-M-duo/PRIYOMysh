@@ -1,11 +1,11 @@
 #include "FriendsController.hpp"
+#include "helpers.hpp"
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpTypes.h>
-#include <trantor/utils/Date.h>
 #include <iomanip>
 #include <sstream>
-#include "helpers.hpp"
+#include <trantor/utils/Date.h>
 
 using namespace drogon;
 
@@ -52,10 +52,7 @@ static void sendInternalError(Callback callback) {
     callback(resp);
 }
 
-void FriendsController::addFriend(
-    const HttpRequestPtr &req,
-    Callback &&callback
-) {
+void FriendsController::addFriend(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
             sendUnauthorized(callback);
@@ -82,8 +79,7 @@ void FriendsController::addFriend(
 
         db->execSqlAsync(
             "SELECT id FROM users WHERE login = $1",
-            [callback, db, currentLogin,
-             friendLogin](const drogon::orm::Result &r) {
+            [callback, db, currentLogin, friendLogin](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     sendNotFound("User not found", callback);
                     return;
@@ -92,8 +88,7 @@ void FriendsController::addFriend(
 
                 db->execSqlAsync(
                     "SELECT id FROM users WHERE login = $1",
-                    [callback, db, userId,
-                     friendLogin](const drogon::orm::Result &r2) {
+                    [callback, db, userId, friendLogin](const drogon::orm::Result &r2) {
                         if (r2.empty()) {
                             sendNotFound("Friend not found", callback);
                             return;
@@ -110,26 +105,19 @@ void FriendsController::addFriend(
                             [callback](const drogon::orm::Result &) {
                                 Json::Value ret;
                                 ret["status"] = "ok";
-                                auto resp =
-                                    HttpResponse::newHttpJsonResponse(ret);
+                                auto resp = HttpResponse::newHttpJsonResponse(ret);
                                 resp->setStatusCode(k200OK);
                                 callback(resp);
                             },
-                            sendDbErrorResponse(callback), userId, friendId
-                        );
+                            sendDbErrorResponse(callback), userId, friendId);
                     },
-                    sendDbErrorResponse(callback), friendLogin
-                );
+                    sendDbErrorResponse(callback), friendLogin);
             },
-            sendDbErrorResponse(callback), currentLogin
-        );
+            sendDbErrorResponse(callback), currentLogin);
     });
 }
 
-void FriendsController::removeFriend(
-    const HttpRequestPtr &req,
-    Callback &&callback
-) {
+void FriendsController::removeFriend(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
             sendUnauthorized(callback);
@@ -152,8 +140,7 @@ void FriendsController::removeFriend(
 
         db->execSqlAsync(
             "SELECT id FROM users WHERE login = $1",
-            [callback, db, currentLogin,
-             friendLogin](const drogon::orm::Result &r) {
+            [callback, db, currentLogin, friendLogin](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     sendNotFound("User not found", callback);
                     return;
@@ -162,8 +149,7 @@ void FriendsController::removeFriend(
 
                 db->execSqlAsync(
                     "SELECT id FROM users WHERE login = $1",
-                    [callback, db, userId,
-                     friendLogin](const drogon::orm::Result &r2) {
+                    [callback, db, userId, friendLogin](const drogon::orm::Result &r2) {
                         if (r2.empty()) {
                             Json::Value ret;
                             ret["status"] = "ok";
@@ -180,26 +166,19 @@ void FriendsController::removeFriend(
                             [callback](const drogon::orm::Result &) {
                                 Json::Value ret;
                                 ret["status"] = "ok";
-                                auto resp =
-                                    HttpResponse::newHttpJsonResponse(ret);
+                                auto resp = HttpResponse::newHttpJsonResponse(ret);
                                 resp->setStatusCode(k200OK);
                                 callback(resp);
                             },
-                            sendDbErrorResponse(callback), userId, friendId
-                        );
+                            sendDbErrorResponse(callback), userId, friendId);
                     },
-                    sendDbErrorResponse(callback), friendLogin
-                );
+                    sendDbErrorResponse(callback), friendLogin);
             },
-            sendDbErrorResponse(callback), currentLogin
-        );
+            sendDbErrorResponse(callback), currentLogin);
     });
 }
 
-void FriendsController::getFriendsList(
-    const HttpRequestPtr &req,
-    Callback &&callback
-) {
+void FriendsController::getFriendsList(const HttpRequestPtr &req, Callback &&callback) {
     verifyToken(req, [callback, req](std::optional<std::string> loginOpt) {
         if (!loginOpt) {
             sendUnauthorized(callback);
@@ -249,7 +228,6 @@ void FriendsController::getFriendsList(
                 callback(resp);
             },
             sendDbErrorResponse(callback), currentLogin, std::to_string(limit),
-            std::to_string(offset)
-        );
+            std::to_string(offset));
     });
 }
