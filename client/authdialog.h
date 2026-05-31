@@ -1,10 +1,10 @@
 #ifndef AUTHDIALOG_H
 #define AUTHDIALOG_H
 
-#include <QDialog>
-#include <QLineEdit>
 #include <QCheckBox>
+#include <QDialog>
 #include <QLabel>
+#include <QLineEdit>
 
 class AuthDialog : public QDialog {
     Q_OBJECT
@@ -20,8 +20,8 @@ public:
 
 signals:
     void loginClicked(const QString &login, const QString &password);
-    void registerClicked(const QString &login, const QString &password,
-                         const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64);
+    void registerClicked(const QString &login, const QString &password, const QString &email,
+                         const QString &phone, bool isPrivate, const QString &avatarBase64);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

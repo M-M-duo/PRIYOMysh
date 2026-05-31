@@ -98,7 +98,8 @@ public:
             QPixmap pixmap;
             pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
             if (!pixmap.isNull()) {
-                avatarLabel->setPixmap(pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                avatarLabel->setPixmap(
+                    pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 avatarLabel->setStyleSheet("border-radius: 12px;");
             }
         }
@@ -159,8 +160,10 @@ public:
             dislikeCount = post["dislikesCount"].toInt();
             likeButton->setText(QString("🧀 %1").arg(likeCount));
             dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
-            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
-            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; "
+                                      "font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: "
+                                         "none; font-size: 16px; padding: 4px; }");
 
             QHBoxLayout *likesLayout = new QHBoxLayout();
             likesLayout->setSpacing(10);
@@ -172,7 +175,8 @@ public:
 
             nextButton = new QPushButton("▶", this);
             nextButton->setFixedSize(40, 40);
-            nextButton->setEnabled(cachedImages.size() > 1 && currentImageIndex < cachedImages.size() - 1);
+            nextButton->setEnabled(cachedImages.size() > 1 &&
+                                   currentImageIndex < cachedImages.size() - 1);
             actionRow->addWidget(nextButton);
 
             actionRow->addStretch();
@@ -197,8 +201,10 @@ public:
             dislikeCount = post["dislikesCount"].toInt();
             likeButton->setText(QString("🧀 %1").arg(likeCount));
             dislikeButton->setText(QString("🪤 %1").arg(dislikeCount));
-            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
-            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; font-size: 16px; padding: 4px; }");
+            likeButton->setStyleSheet("QPushButton { background-color: transparent; border: none; "
+                                      "font-size: 16px; padding: 4px; }");
+            dislikeButton->setStyleSheet("QPushButton { background-color: transparent; border: "
+                                         "none; font-size: 16px; padding: 4px; }");
 
             infoRow->addWidget(likeButton);
             infoRow->addWidget(dislikeButton);
@@ -206,7 +212,8 @@ public:
 
             QString createdAt = post["createdAt"].toString();
             QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
-            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            if (!dt.isValid())
+                dt = QDateTime::fromString(createdAt, Qt::ISODate);
             dateLabel = new QLabel(dt.toString("dd.MM.yyyy HH:mm"), this);
             dateLabel->setStyleSheet("color: #6c757d;");
             infoRow->addWidget(dateLabel);
@@ -218,7 +225,8 @@ public:
         if (post.contains("tags") && post["tags"].isArray()) {
             QJsonArray tagsArr = post["tags"].toArray();
             for (const auto &tag : tagsArr) {
-                if (!tagsStr.isEmpty()) tagsStr += " ";
+                if (!tagsStr.isEmpty())
+                    tagsStr += " ";
                 tagsStr += "#" + tag.toString();
             }
         }
@@ -230,7 +238,8 @@ public:
         if (hasImages) {
             QString createdAt = post["createdAt"].toString();
             QDateTime dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss.zzz");
-            if (!dt.isValid()) dt = QDateTime::fromString(createdAt, Qt::ISODate);
+            if (!dt.isValid())
+                dt = QDateTime::fromString(createdAt, Qt::ISODate);
             dateLabel = new QLabel("Posted: " + dt.toString("dd.MM.yyyy HH:mm"), this);
             dateLabel->setStyleSheet("color: #6c757d;");
             dateLabel->setAlignment(Qt::AlignCenter);
@@ -250,10 +259,12 @@ public:
             connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
         }
         connect(likeButton, &QPushButton::clicked, [this]() {
-            if (feedWindow) feedWindow->onLikeDislike(postId, true);
+            if (feedWindow)
+                feedWindow->onLikeDislike(postId, true);
         });
         connect(dislikeButton, &QPushButton::clicked, [this]() {
-            if (feedWindow) feedWindow->onLikeDislike(postId, false);
+            if (feedWindow)
+                feedWindow->onLikeDislike(postId, false);
         });
     }
 
@@ -269,22 +280,27 @@ private slots:
         if (currentImageIndex > 0) {
             currentImageIndex--;
             updateImage();
-            if (prevButton) prevButton->setEnabled(currentImageIndex > 0);
-            if (nextButton) nextButton->setEnabled(currentImageIndex < cachedImages.size() - 1);
+            if (prevButton)
+                prevButton->setEnabled(currentImageIndex > 0);
+            if (nextButton)
+                nextButton->setEnabled(currentImageIndex < cachedImages.size() - 1);
         }
     }
     void nextImage() {
         if (currentImageIndex < cachedImages.size() - 1) {
             currentImageIndex++;
             updateImage();
-            if (prevButton) prevButton->setEnabled(currentImageIndex > 0);
-            if (nextButton) nextButton->setEnabled(currentImageIndex < cachedImages.size() - 1);
+            if (prevButton)
+                prevButton->setEnabled(currentImageIndex > 0);
+            if (nextButton)
+                nextButton->setEnabled(currentImageIndex < cachedImages.size() - 1);
         }
     }
 
 private:
     void updateImage() {
-        if (cachedImages.isEmpty()) return;
+        if (cachedImages.isEmpty())
+            return;
         imageLabel->setPixmap(cachedImages[currentImageIndex]);
     }
 
@@ -655,7 +671,8 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            avatarLabel->setPixmap(pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            avatarLabel->setPixmap(
+                pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             avatarLabel->setStyleSheet("border-radius: 30px;");
         }
     }
@@ -1063,38 +1080,41 @@ void FeedWindow::onEditProfileClicked() {
                 QString phone = obj["phone"].toString();
                 bool isPrivate = obj["isPrivate"].toBool();
                 QString avatarBase64 = obj["image"].toString();
-                EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken, this);
-                connect(&dialog, &EditProfileDialog::profileUpdated,
-                        [this](const QString &login, const QString &email, const QString &phone,
-                               bool isPrivate, const QString &avatarBase64) {
-                            QUrl updateUrl(API_BASE_URL + "/api/me/profile");
-                            QNetworkRequest updateRequest(updateUrl);
-                            updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
-                                                    "application/json");
-                            updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-                            QJsonObject updateJson;
-                            updateJson["login"] = login;
-                            updateJson["email"] = email;
-                            updateJson["phone"] = phone;
-                            updateJson["isPublic"] = !isPrivate;
-                            if (!avatarBase64.isEmpty()) {
-                                updateJson["image"] = avatarBase64;
+                EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken,
+                                         this);
+                connect(
+                    &dialog, &EditProfileDialog::profileUpdated,
+                    [this](const QString &login, const QString &email, const QString &phone,
+                           bool isPrivate, const QString &avatarBase64) {
+                        QUrl updateUrl(API_BASE_URL + "/api/me/profile");
+                        QNetworkRequest updateRequest(updateUrl);
+                        updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                                                "application/json");
+                        updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+                        QJsonObject updateJson;
+                        updateJson["login"] = login;
+                        updateJson["email"] = email;
+                        updateJson["phone"] = phone;
+                        updateJson["isPublic"] = !isPrivate;
+                        if (!avatarBase64.isEmpty()) {
+                            updateJson["image"] = avatarBase64;
+                        }
+                        QByteArray updateData = QJsonDocument(updateJson).toJson();
+                        QNetworkReply *updateReply =
+                            networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
+                        connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
+                            if (updateReply->error() == QNetworkReply::NoError) {
+                                showCustomMessage(this, "Profile updated",
+                                                  ":/sources/warn_happy.png");
+                                loadMyProfile();
+                            } else {
+                                showCustomMessage(this,
+                                                  "Update failed: " + updateReply->errorString(),
+                                                  ":/sources/warning_01.png");
                             }
-                            QByteArray updateData = QJsonDocument(updateJson).toJson();
-                            QNetworkReply *updateReply = networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
-                            connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
-                                if (updateReply->error() == QNetworkReply::NoError) {
-                                    showCustomMessage(this, "Profile updated",
-                                                      ":/sources/warn_happy.png");
-                                    loadMyProfile();
-                                } else {
-                                    showCustomMessage(this,
-                                                      "Update failed: " + updateReply->errorString(),
-                                                      ":/sources/warning_01.png");
-                                }
-                                updateReply->deleteLater();
-                            });
+                            updateReply->deleteLater();
                         });
+                    });
                 dialog.exec();
             }
         } else {

@@ -1,25 +1,28 @@
 #include "editprofiledialog.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QDialogButtonBox>
-#include <QPushButton>
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QImage>
 #include <QBuffer>
-#include <QNetworkRequest>
-#include <QNetworkReply>
+#include <QDebug>
+#include <QDialogButtonBox>
+#include <QEvent>
+#include <QFileDialog>
+#include <QGuiApplication>
+#include <QHBoxLayout>
+#include <QImage>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
+#include <QMessageBox>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QPushButton>
 #include <QScreen>
-#include <QGuiApplication>
-#include <QEvent>
-#include <QDebug>
+#include <QVBoxLayout>
 
 const QString API_BASE_URL = "http://127.0.0.1:8080";
 
-EditProfileDialog::EditProfileDialog(const QString &login, const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64, const QString &token, QWidget *parent)
+EditProfileDialog::EditProfileDialog(const QString &login, const QString &email,
+                                     const QString &phone, bool isPrivate,
+                                     const QString &avatarBase64, const QString &token,
+                                     QWidget *parent)
     : QDialog(parent), authToken(token), avatarBase64(avatarBase64) {
     setupUI();
     loginEdit->setText(login);
@@ -30,7 +33,8 @@ EditProfileDialog::EditProfileDialog(const QString &login, const QString &email,
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
         if (!pixmap.isNull()) {
-            avatarLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            avatarLabel->setPixmap(
+                pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             avatarLabel->setStyleSheet("border-radius: 32px;");
         }
     }
@@ -53,7 +57,8 @@ void EditProfileDialog::setupUI() {
     avatarLayout->addStretch();
     avatarLabel = new QLabel(this);
     avatarLabel->setFixedSize(64, 64);
-    avatarLabel->setStyleSheet("border: 1px solid #ccc; border-radius: 32px; background-color: #e0e0e0;");
+    avatarLabel->setStyleSheet(
+        "border: 1px solid #ccc; border-radius: 32px; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
     avatarLabel->setCursor(Qt::PointingHandCursor);
@@ -64,17 +69,20 @@ void EditProfileDialog::setupUI() {
 
     layout->addWidget(new QLabel("Login:"));
     loginEdit = new QLineEdit(this);
-    loginEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; border-radius: 10px; padding: 8px;");
+    loginEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
+                             "border-radius: 10px; padding: 8px;");
     layout->addWidget(loginEdit);
 
     layout->addWidget(new QLabel("Email:"));
     emailEdit = new QLineEdit(this);
-    emailEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; border-radius: 10px; padding: 8px;");
+    emailEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
+                             "border-radius: 10px; padding: 8px;");
     layout->addWidget(emailEdit);
 
     layout->addWidget(new QLabel("Phone:"));
     phoneEdit = new QLineEdit(this);
-    phoneEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; border-radius: 10px; padding: 8px;");
+    phoneEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
+                             "border-radius: 10px; padding: 8px;");
     layout->addWidget(phoneEdit);
 
     privateCheckBox = new QCheckBox("Private profile", this);
@@ -82,7 +90,8 @@ void EditProfileDialog::setupUI() {
 
     changePasswordButton = new QPushButton("Change password", this);
     layout->addWidget(changePasswordButton);
-    connect(changePasswordButton, &QPushButton::clicked, this, &EditProfileDialog::onChangePasswordClicked);
+    connect(changePasswordButton, &QPushButton::clicked, this,
+            &EditProfileDialog::onChangePasswordClicked);
 
     passwordWidget = new QWidget(this);
     passwordWidget->setVisible(false);
@@ -102,22 +111,26 @@ void EditProfileDialog::setupUI() {
     pwdButtonLayout->addWidget(cancelPasswordButton);
     pwdLayout->addLayout(pwdButtonLayout);
     layout->addWidget(passwordWidget);
-    connect(updatePasswordButton, &QPushButton::clicked, this, &EditProfileDialog::onPasswordUpdated);
+    connect(updatePasswordButton, &QPushButton::clicked, this,
+            &EditProfileDialog::onPasswordUpdated);
     connect(cancelPasswordButton, &QPushButton::clicked, [this]() {
         passwordWidget->setVisible(false);
         currentPasswordEdit->clear();
         newPasswordEdit->clear();
     });
 
-    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
+    QDialogButtonBox *buttonBox =
+        new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     layout->addWidget(buttonBox, 0, Qt::AlignCenter);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &EditProfileDialog::onSaveClicked);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
 void EditProfileDialog::chooseAvatar() {
-    QString filePath = QFileDialog::getOpenFileName(this, "Select Avatar", "", "Images (*.png *.jpg *.jpeg *.bmp)");
-    if (filePath.isEmpty()) return;
+    QString filePath = QFileDialog::getOpenFileName(this, "Select Avatar", "",
+                                                    "Images (*.png *.jpg *.jpeg *.bmp)");
+    if (filePath.isEmpty())
+        return;
     QString base64 = cropAndToBase64(filePath);
     if (base64.isEmpty()) {
         showMessage("Failed to load image", ":/sources/warning_01.png");
@@ -127,14 +140,16 @@ void EditProfileDialog::chooseAvatar() {
     QPixmap pixmap;
     pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
     if (!pixmap.isNull()) {
-        avatarLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        avatarLabel->setPixmap(
+            pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         avatarLabel->setStyleSheet("border-radius: 32px;");
     }
 }
 
 QString EditProfileDialog::cropAndToBase64(const QString &filePath) {
     QImage image(filePath);
-    if (image.isNull()) return QString();
+    if (image.isNull())
+        return QString();
     int size = qMin(image.width(), image.height());
     int x = (image.width() - size) / 2;
     int y = (image.height() - size) / 2;
