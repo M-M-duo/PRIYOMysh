@@ -10,8 +10,8 @@ class EditProfileDialog : public QDialog {
     Q_OBJECT
 public:
     explicit EditProfileDialog(const QString &login, const QString &email, const QString &phone,
-                               bool isPrivate, const QString &avatarBase64, const QString &token,
-                               QWidget *parent = nullptr);
+                               bool isPrivate, const QString &avatarBase64,
+                               const QString &authToken, QWidget *parent = nullptr);
     ~EditProfileDialog();
 
 signals:
@@ -32,8 +32,8 @@ private:
     QLineEdit *phoneEdit;
     QCheckBox *privateCheckBox;
     QLabel *avatarLabel;
-    QString authToken;
     QString avatarBase64;
+    QString authToken;
     QPushButton *changePasswordButton;
     QLineEdit *currentPasswordEdit;
     QLineEdit *newPasswordEdit;
@@ -42,8 +42,9 @@ private:
     QWidget *passwordWidget;
 
     void setupUI();
-    void chooseAvatar();
+    void setupPasswordUI();
     QString cropAndToBase64(const QString &filePath);
+    void chooseAvatar();
     void showMessage(const QString &text, const QString &iconPath);
 };
 

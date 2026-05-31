@@ -1,6 +1,5 @@
 #include "editprofiledialog.h"
 #include <QBuffer>
-#include <QDebug>
 #include <QDialogButtonBox>
 #include <QEvent>
 #include <QFileDialog>
@@ -21,13 +20,15 @@ const QString API_BASE_URL = "http://127.0.0.1:8080";
 
 EditProfileDialog::EditProfileDialog(const QString &login, const QString &email,
                                      const QString &phone, bool isPrivate,
-                                     const QString &avatarBase64, const QString &token,
+                                     const QString &avatarBase64, const QString &authToken,
                                      QWidget *parent)
-    : QDialog(parent), authToken(token), avatarBase64(avatarBase64) {
+    : QDialog(parent), avatarBase64(avatarBase64), authToken(authToken) {
     setupUI();
     loginEdit->setText(login);
-    emailEdit->setText(email);
-    phoneEdit->setText(phone);
+    if (!email.isEmpty())
+        emailEdit->setText(email);
+    if (!phone.isEmpty())
+        phoneEdit->setText(phone);
     privateCheckBox->setChecked(isPrivate);
     if (!avatarBase64.isEmpty()) {
         QPixmap pixmap;
@@ -126,6 +127,8 @@ void EditProfileDialog::setupUI() {
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
+void EditProfileDialog::setupPasswordUI() {}
+
 void EditProfileDialog::chooseAvatar() {
     QString filePath = QFileDialog::getOpenFileName(this, "Select Avatar", "",
                                                     "Images (*.png *.jpg *.jpeg *.bmp)");
@@ -208,30 +211,28 @@ void EditProfileDialog::onPasswordUpdated() {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", ("Bearer " + authToken).toUtf8());
-
     QJsonObject json;
     json["currentPassword"] = currentPwd;
     json["newPassword"] = newPwd;
     QByteArray data = QJsonDocument(json).toJson();
-
-    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    QNetworkReply *reply = manager->post(request, data);
-    connect(reply, &QNetworkReply::finished, [this, reply, manager]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            showMessage("Password updated successfully", ":/sources/warn_happy.png");
-            passwordWidget->setVisible(false);
-            currentPasswordEdit->clear();
-            newPasswordEdit->clear();
-        } else {
-            QByteArray response = reply->readAll();
-            QString errorMsg = reply->errorString();
-            QJsonDocument doc = QJsonDocument::fromJson(response);
-            if (doc.isObject() && doc.object().contains("reason")) {
-                errorMsg = doc.object()["reason"].toString();
-            }
-            showMessage("Password update failed: " + errorMsg, ":/sources/warning_01.png");
+    QNetworkAccessManager manager;
+    QNetworkReply *reply = manager.post(request, data);
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    if (reply->error() == QNetworkReply::NoError) {
+        showMessage("Password updated successfully", ":/sources/warn_happy.png");
+        passwordWidget->setVisible(false);
+        currentPasswordEdit->clear();
+        newPasswordEdit->clear();
+    } else {
+        QByteArray response = reply->readAll();
+        QString errorMsg = reply->errorString();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isObject() && doc.object().contains("reason")) {
+            errorMsg = doc.object()["reason"].toString();
         }
-        reply->deleteLater();
-        manager->deleteLater();
-    });
+        showMessage("Password update failed: " + errorMsg, ":/sources/warning_01.png");
+    }
+    reply->deleteLater();
 }

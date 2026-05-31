@@ -1076,10 +1076,12 @@ void FeedWindow::onEditProfileClicked() {
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
                 QString login = obj["login"].toString();
-                QString email = obj["email"].toString();
-                QString phone = obj["phone"].toString();
-                bool isPrivate = obj["isPrivate"].toBool();
-                QString avatarBase64 = obj["image"].toString();
+                QString email = obj.contains("email") ? obj["email"].toString() : "";
+                QString phone = obj.contains("phone") ? obj["phone"].toString() : "";
+                bool isPublic = obj.contains("isPublic") ? obj["isPublic"].toBool() : true;
+                bool isPrivate = !isPublic;
+                QString avatarBase64 =
+                    obj.contains("image") && !obj["image"].isNull() ? obj["image"].toString() : "";
                 EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken,
                                          this);
                 connect(
@@ -1093,8 +1095,10 @@ void FeedWindow::onEditProfileClicked() {
                         updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
                         QJsonObject updateJson;
                         updateJson["login"] = login;
-                        updateJson["email"] = email;
-                        updateJson["phone"] = phone;
+                        if (!email.isEmpty())
+                            updateJson["email"] = email;
+                        if (!phone.isEmpty())
+                            updateJson["phone"] = phone;
                         updateJson["isPublic"] = !isPrivate;
                         if (!avatarBase64.isEmpty()) {
                             updateJson["image"] = avatarBase64;
