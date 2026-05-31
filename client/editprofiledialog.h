@@ -1,33 +1,47 @@
 #ifndef EDITPROFILEDIALOG_H
 #define EDITPROFILEDIALOG_H
 
-#include <QCheckBox>
 #include <QDialog>
 #include <QLineEdit>
+#include <QCheckBox>
+#include <QLabel>
 
 class EditProfileDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit EditProfileDialog(const QString &login, const QString &email, const QString &phone,
-                               bool isPrivate, QWidget *parent = nullptr);
-    QString getLogin() const;
-    QString getEmail() const;
-    QString getPhone() const;
-    bool isPrivate() const;
+    explicit EditProfileDialog(const QString &login, const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64, const QString &token, QWidget *parent = nullptr);
+    ~EditProfileDialog();
+
+signals:
+    void profileUpdated(const QString &login, const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void onSaveClicked();
-
-signals:
-    void profileUpdated(const QString &login, const QString &email, const QString &phone,
-                        bool isPrivate);
+    void onChangePasswordClicked();
+    void onPasswordUpdated();
 
 private:
     QLineEdit *loginEdit;
     QLineEdit *emailEdit;
     QLineEdit *phoneEdit;
     QCheckBox *privateCheckBox;
+    QLabel *avatarLabel;
+    QString authToken;
+    QString avatarBase64;
+    QPushButton *changePasswordButton;
+    QLineEdit *currentPasswordEdit;
+    QLineEdit *newPasswordEdit;
+    QPushButton *updatePasswordButton;
+    QPushButton *cancelPasswordButton;
+    QWidget *passwordWidget;
+
     void setupUI();
+    void chooseAvatar();
+    QString cropAndToBase64(const QString &filePath);
+    void showMessage(const QString &text, const QString &iconPath);
 };
 
 #endif

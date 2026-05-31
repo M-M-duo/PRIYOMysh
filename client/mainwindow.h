@@ -13,8 +13,8 @@ public:
 
 private slots:
     void onLoginClicked(const QString &login, const QString &password);
-    void onRegisterClicked(const QString &login, const QString &password, const QString &email,
-                           const QString &phone, bool isPrivate);
+    void onRegisterClicked(const QString &login, const QString &password,
+                           const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64);
     void onAuthReplyFinished(QNetworkReply *reply);
 
 private:
@@ -27,8 +27,8 @@ private:
     QString pendingPhone;
     bool pendingIsPrivate;
 
-    void sendAuthRequest(const QString &login, const QString &password, const QString &email,
-                         const QString &phone, bool isPrivate, const QString &mode);
+    void sendAuthRequest(const QString &login, const QString &password,
+                         const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64, const QString &mode);
     void sendSignInRequest(const QString &login, const QString &password);
 };
 

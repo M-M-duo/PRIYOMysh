@@ -93,6 +93,15 @@ public:
         QLabel *avatarLabel = new QLabel(this);
         avatarLabel->setFixedSize(24, 24);
         avatarLabel->setStyleSheet("border-radius: 12px; background-color: #cccccc;");
+        if (post.contains("authorAvatar") && !post["authorAvatar"].toString().isEmpty()) {
+            QString base64 = post["authorAvatar"].toString();
+            QPixmap pixmap;
+            pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+            if (!pixmap.isNull()) {
+                avatarLabel->setPixmap(pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                avatarLabel->setStyleSheet("border-radius: 12px;");
+            }
+        }
         authorLayout->addWidget(avatarLabel);
 
         authorLabel = new QLabel(post["author"].toString(), this);
@@ -641,6 +650,16 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     followingButton->setText(QString("%1\nfollowing").arg(following));
     postsButton->setText(QString("%1\nposts").arg(posts));
 
+    if (profile.contains("image") && !profile["image"].toString().isEmpty()) {
+        QString base64 = profile["image"].toString();
+        QPixmap pixmap;
+        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+        if (!pixmap.isNull()) {
+            avatarLabel->setPixmap(pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            avatarLabel->setStyleSheet("border-radius: 30px;");
+        }
+    }
+
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (isOwnProfile || isMe) {
         followProfileButton->setVisible(true);
@@ -1027,7 +1046,7 @@ void FeedWindow::onFollowingClicked() {
 }
 
 void FeedWindow::onEditProfileClicked() {
-    QUrl url(API_BASE_URL + "/api/users/me");
+    QUrl url(API_BASE_URL + "/api/me/profile");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -1043,36 +1062,39 @@ void FeedWindow::onEditProfileClicked() {
                 QString email = obj["email"].toString();
                 QString phone = obj["phone"].toString();
                 bool isPrivate = obj["isPrivate"].toBool();
-                EditProfileDialog dialog(login, email, phone, isPrivate, this);
-                connect(
-                    &dialog, &EditProfileDialog::profileUpdated,
-                    [this](const QString &login, const QString &email, const QString &phone,
-                           bool isPrivate) {
-                        QUrl updateUrl(API_BASE_URL + "/api/users/me");
-                        QNetworkRequest updateRequest(updateUrl);
-                        updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
-                                                "application/json");
-                        updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-                        QJsonObject updateJson;
-                        updateJson["login"] = login;
-                        updateJson["email"] = email;
-                        updateJson["phone"] = phone;
-                        updateJson["isPublic"] = !isPrivate;
-                        QByteArray updateData = QJsonDocument(updateJson).toJson();
-                        QNetworkReply *updateReply = networkManager->put(updateRequest, updateData);
-                        connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
-                            if (updateReply->error() == QNetworkReply::NoError) {
-                                showCustomMessage(this, "Profile updated",
-                                                  ":/sources/warn_happy.png");
-                                loadMyProfile();
-                            } else {
-                                showCustomMessage(this,
-                                                  "Update failed: " + updateReply->errorString(),
-                                                  ":/sources/warning_01.png");
+                QString avatarBase64 = obj["image"].toString();
+                EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken, this);
+                connect(&dialog, &EditProfileDialog::profileUpdated,
+                        [this](const QString &login, const QString &email, const QString &phone,
+                               bool isPrivate, const QString &avatarBase64) {
+                            QUrl updateUrl(API_BASE_URL + "/api/me/profile");
+                            QNetworkRequest updateRequest(updateUrl);
+                            updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                                                    "application/json");
+                            updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+                            QJsonObject updateJson;
+                            updateJson["login"] = login;
+                            updateJson["email"] = email;
+                            updateJson["phone"] = phone;
+                            updateJson["isPublic"] = !isPrivate;
+                            if (!avatarBase64.isEmpty()) {
+                                updateJson["image"] = avatarBase64;
                             }
-                            updateReply->deleteLater();
+                            QByteArray updateData = QJsonDocument(updateJson).toJson();
+                            QNetworkReply *updateReply = networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
+                            connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
+                                if (updateReply->error() == QNetworkReply::NoError) {
+                                    showCustomMessage(this, "Profile updated",
+                                                      ":/sources/warn_happy.png");
+                                    loadMyProfile();
+                                } else {
+                                    showCustomMessage(this,
+                                                      "Update failed: " + updateReply->errorString(),
+                                                      ":/sources/warning_01.png");
+                                }
+                                updateReply->deleteLater();
+                            });
                         });
-                    });
                 dialog.exec();
             }
         } else {

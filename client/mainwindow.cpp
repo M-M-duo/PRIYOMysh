@@ -1,20 +1,20 @@
 #include "mainwindow.h"
 #include "authdialog.h"
 #include "feedwindow.h"
-#include <QDebug>
-#include <QGuiApplication>
-#include <QHBoxLayout>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonParseError>
-#include <QLabel>
-#include <QMessageBox>
 #include <QNetworkRequest>
-#include <QPixmap>
-#include <QPushButton>
-#include <QScreen>
 #include <QUrl>
+#include <QJsonParseError>
+#include <QMessageBox>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QDebug>
+#include <QPixmap>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QLabel>
+#include <QScreen>
+#include <QGuiApplication>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
@@ -55,7 +55,9 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
     msgBox.exec();
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nullptr) {
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent), currentDialog(nullptr)
+{
     networkManager = new QNetworkAccessManager(this);
     setWindowTitle("PRIYOMYSH");
     setFixedSize(450, 840);
@@ -76,8 +78,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     QLabel *logoLabel = new QLabel(this);
     QPixmap logoPixmap(":/sources/enter_logo.png");
     if (!logoPixmap.isNull()) {
-        QPixmap scaledLogo =
-            logoPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QPixmap scaledLogo = logoPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         logoLabel->setPixmap(scaledLogo);
     } else {
         logoLabel->setText("Logo");
@@ -150,19 +151,18 @@ void MainWindow::onLoginClicked(const QString &login, const QString &password) {
 }
 
 void MainWindow::onRegisterClicked(const QString &login, const QString &password,
-                                   const QString &email, const QString &phone, bool isPrivate) {
+                                   const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64) {
     pendingLogin = login;
     pendingPassword = password;
     pendingEmail = email;
     pendingPhone = phone;
     pendingIsPrivate = isPrivate;
     pendingMode = "register";
-    sendAuthRequest(login, password, email, phone, isPrivate, "register");
+    sendAuthRequest(login, password, email, phone, isPrivate, avatarBase64, "register");
 }
 
 void MainWindow::sendAuthRequest(const QString &login, const QString &password,
-                                 const QString &email, const QString &phone, bool isPrivate,
-                                 const QString &mode) {
+                                 const QString &email, const QString &phone, bool isPrivate, const QString &avatarBase64, const QString &mode) {
     QUrl url(QString("http://127.0.0.1:8080/api/auth/%1").arg(mode));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -174,7 +174,7 @@ void MainWindow::sendAuthRequest(const QString &login, const QString &password,
     json["email"] = email;
     json["phone"] = phone;
     json["isPublic"] = !isPrivate;
-    json["image"] = "";
+    json["image"] = avatarBase64;
 
     QByteArray data = QJsonDocument(json).toJson();
 
@@ -183,7 +183,9 @@ void MainWindow::sendAuthRequest(const QString &login, const QString &password,
     qDebug().noquote() << "";
 
     QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, [this, reply]() { onAuthReplyFinished(reply); });
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onAuthReplyFinished(reply);
+    });
 }
 
 void MainWindow::sendSignInRequest(const QString &login, const QString &password) {
@@ -203,7 +205,9 @@ void MainWindow::sendSignInRequest(const QString &login, const QString &password
     qDebug().noquote() << "";
 
     QNetworkReply *reply = networkManager->post(request, data);
-    connect(reply, &QNetworkReply::finished, [this, reply]() { onAuthReplyFinished(reply); });
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        onAuthReplyFinished(reply);
+    });
 }
 
 void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
