@@ -1093,7 +1093,7 @@ void FeedWindow::onEditProfileClicked() {
                     &dialog, &EditProfileDialog::profileUpdated,
                     [this](const QString &login, const QString &email, const QString &phone,
                            bool isPrivate, const QString &avatarBase64) {
-                        qDebug().noquote() << "=== Saving profile updates ===";
+                        qDebug().noquote() << "=== Saving profile updates using PATCH request ===";
                         QUrl updateUrl(API_BASE_URL + "/api/me/profile");
                         QNetworkRequest updateRequest(updateUrl);
                         updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -1117,6 +1117,8 @@ void FeedWindow::onEditProfileClicked() {
 
                         QNetworkReply *updateReply =
                             networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
+                        qDebug().noquote()
+                            << "=== Sending PATCH request to" << updateUrl.toString();
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
                             if (updateReply->error() == QNetworkReply::NoError) {
                                 QByteArray response = updateReply->readAll();
@@ -1133,6 +1135,7 @@ void FeedWindow::onEditProfileClicked() {
                                     errorMsg = doc.object()["reason"].toString();
                                 }
                                 qDebug().noquote() << "=== Profile update ERROR:";
+                                qDebug().noquote() << "HTTP method: PATCH";
                                 qDebug().noquote() << "HTTP error:" << updateReply->errorString();
                                 qDebug().noquote()
                                     << "Response body:" << QString::fromUtf8(response);
