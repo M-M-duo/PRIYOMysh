@@ -1063,6 +1063,7 @@ void FeedWindow::onFollowingClicked() {
 }
 
 void FeedWindow::onEditProfileClicked() {
+    qDebug().noquote() << "=== Edit Profile: Fetching current profile data ===";
     QUrl url(API_BASE_URL + "/api/me/profile");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -1072,6 +1073,9 @@ void FeedWindow::onEditProfileClicked() {
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray response = reply->readAll();
+            qDebug().noquote() << "=== Server response (profile data):";
+            qDebug().noquote() << QString::fromUtf8(response);
+
             QJsonDocument doc = QJsonDocument::fromJson(response);
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
@@ -1082,17 +1086,20 @@ void FeedWindow::onEditProfileClicked() {
                 bool isPrivate = !isPublic;
                 QString avatarBase64 =
                     obj.contains("image") && !obj["image"].isNull() ? obj["image"].toString() : "";
+
                 EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken,
                                          this);
                 connect(
                     &dialog, &EditProfileDialog::profileUpdated,
                     [this](const QString &login, const QString &email, const QString &phone,
                            bool isPrivate, const QString &avatarBase64) {
+                        qDebug().noquote() << "=== Saving profile updates ===";
                         QUrl updateUrl(API_BASE_URL + "/api/me/profile");
                         QNetworkRequest updateRequest(updateUrl);
                         updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
                                                 "application/json");
                         updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
                         QJsonObject updateJson;
                         updateJson["login"] = login;
                         if (!email.isEmpty())
@@ -1103,31 +1110,58 @@ void FeedWindow::onEditProfileClicked() {
                         if (!avatarBase64.isEmpty()) {
                             updateJson["image"] = avatarBase64;
                         }
+
                         QByteArray updateData = QJsonDocument(updateJson).toJson();
+                        qDebug().noquote() << "=== PATCH request body:";
+                        qDebug().noquote() << QString::fromUtf8(updateData);
+
                         QNetworkReply *updateReply =
                             networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
                             if (updateReply->error() == QNetworkReply::NoError) {
+                                QByteArray response = updateReply->readAll();
+                                qDebug().noquote() << "=== Profile update response:";
+                                qDebug().noquote() << QString::fromUtf8(response);
                                 showCustomMessage(this, "Profile updated",
                                                   ":/sources/warn_happy.png");
                                 loadMyProfile();
                             } else {
-                                showCustomMessage(this,
-                                                  "Update failed: " + updateReply->errorString(),
+                                QByteArray response = updateReply->readAll();
+                                QString errorMsg = updateReply->errorString();
+                                QJsonDocument doc = QJsonDocument::fromJson(response);
+                                if (doc.isObject() && doc.object().contains("reason")) {
+                                    errorMsg = doc.object()["reason"].toString();
+                                }
+                                qDebug().noquote() << "=== Profile update ERROR:";
+                                qDebug().noquote() << "HTTP error:" << updateReply->errorString();
+                                qDebug().noquote()
+                                    << "Response body:" << QString::fromUtf8(response);
+                                showCustomMessage(this, "Update failed: " + errorMsg,
                                                   ":/sources/warning_01.png");
                             }
                             updateReply->deleteLater();
                         });
                     });
                 dialog.exec();
+            } else {
+                qDebug().noquote() << "=== Profile data response is not a JSON object";
             }
         } else {
-            showCustomMessage(this, "Failed to load profile data", ":/sources/warning_01.png");
+            QByteArray response = reply->readAll();
+            QString errorMsg = reply->errorString();
+            QJsonDocument doc = QJsonDocument::fromJson(response);
+            if (doc.isObject() && doc.object().contains("reason")) {
+                errorMsg = doc.object()["reason"].toString();
+            }
+            qDebug().noquote() << "=== Failed to fetch profile data:";
+            qDebug().noquote() << "HTTP error:" << reply->errorString();
+            qDebug().noquote() << "Response body:" << QString::fromUtf8(response);
+            showCustomMessage(this, "Failed to load profile data: " + errorMsg,
+                              ":/sources/warning_01.png");
         }
         reply->deleteLater();
     });
 }
-
 void FeedWindow::showError(const QString &message) {
     showCustomMessage(this, message, ":/sources/warning_01.png");
 }
