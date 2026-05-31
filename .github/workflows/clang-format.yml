@@ -1,0 +1,18 @@
+name: clang-format Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  formatting-check:
+    name: Check code style
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run clang-format
+      uses: jidicula/clang-format-action@v4.0.0
+      with:
+        clang-format-version: '17'
+        check-path: '.'
+        exclude-regex: 'build/|third_party/'
