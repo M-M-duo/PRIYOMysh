@@ -94,21 +94,21 @@ public:
         authorLayout->setSpacing(10);
 
         QLabel *avatarLabel = new QLabel(this);
-        avatarLabel->setFixedSize(24, 24);
+        avatarLabel->setFixedSize(64, 64);
         avatarLabel->setStyleSheet("border: none; background-color: #cccccc; border-radius: 12px;");
         if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
             QString base64 = post["author_avatar"].toString();
             QPixmap pixmap;
             pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
             if (!pixmap.isNull()) {
-                QPixmap rounded(24, 24);
+                QPixmap rounded(64, 64);
                 rounded.fill(Qt::transparent);
                 QPainter painter(&rounded);
                 painter.setRenderHint(QPainter::Antialiasing);
                 painter.setBrush(
-                    QBrush(pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+                    QBrush(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
                 painter.setPen(Qt::NoPen);
-                painter.drawRoundedRect(0, 0, 24, 24, 12, 12);
+                painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
                 avatarLabel->setPixmap(rounded);
                 avatarLabel->setStyleSheet("border: none;");
             }
@@ -680,14 +680,14 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap rounded(60, 60);
+            QPixmap rounded(80, 80);
             rounded.fill(Qt::transparent);
             QPainter painter(&rounded);
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setBrush(
-                QBrush(pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+                QBrush(pixmap.scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
             painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(0, 0, 60, 60, 30, 30);
+            painter.drawRoundedRect(0, 0, 80, 80, 40, 40);
             avatarLabel->setPixmap(rounded);
             avatarLabel->setStyleSheet("border: none;");
         }
