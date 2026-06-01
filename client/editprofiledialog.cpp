@@ -12,6 +12,7 @@
 #include <QMessageBox>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPainter>
 #include <QPushButton>
 #include <QScreen>
 #include <QVBoxLayout>

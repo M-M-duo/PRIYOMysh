@@ -19,6 +19,7 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QNetworkRequest>
+#include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
