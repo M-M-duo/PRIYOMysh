@@ -82,10 +82,11 @@ public:
     PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr)
         : QWidget(parent), feedWindow(parent), currentImageIndex(0) {
         QVBoxLayout *mainLayout = new QVBoxLayout(this);
-        postId = post["id"].toString();
         mainLayout->setSpacing(5);
         mainLayout->setContentsMargins(0, 5, 0, 5);
         mainLayout->setAlignment(Qt::AlignCenter);
+
+        postId = post["id"].toString();
 
         QHBoxLayout *authorLayout = new QHBoxLayout();
         authorLayout->setContentsMargins(20, 0, 20, 0);
@@ -94,8 +95,8 @@ public:
         QLabel *avatarLabel = new QLabel(this);
         avatarLabel->setFixedSize(24, 24);
         avatarLabel->setStyleSheet("border-radius: 12px; background-color: #cccccc;");
-        if (post.contains("authorAvatar") && !post["authorAvatar"].toString().isEmpty()) {
-            QString base64 = post["authorAvatar"].toString();
+        if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
+            QString base64 = post["author_avatar"].toString();
             QPixmap pixmap;
             pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
             if (!pixmap.isNull()) {
@@ -1166,6 +1167,7 @@ void FeedWindow::onEditProfileClicked() {
         reply->deleteLater();
     });
 }
+
 void FeedWindow::showError(const QString &message) {
     showCustomMessage(this, message, ":/sources/warning_01.png");
 }
