@@ -76,12 +76,14 @@ void EditProfileDialog::setupUI() {
 
     layout->addWidget(new QLabel("Email:"));
     emailEdit = new QLineEdit(this);
+    emailEdit->setPlaceholderText("example@mail.ru");
     emailEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
                              "border-radius: 10px; padding: 8px;");
     layout->addWidget(emailEdit);
 
     layout->addWidget(new QLabel("Phone:"));
     phoneEdit = new QLineEdit(this);
+    phoneEdit->setPlaceholderText("+7 910 294 10 01");
     phoneEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
                              "border-radius: 10px; padding: 8px;");
     layout->addWidget(phoneEdit);
