@@ -25,18 +25,23 @@ EditProfileDialog::EditProfileDialog(const QString &login, const QString &email,
     : QDialog(parent), avatarBase64(avatarBase64), authToken(authToken) {
     setupUI();
     loginEdit->setText(login);
-    if (!email.isEmpty())
-        emailEdit->setText(email);
-    if (!phone.isEmpty())
-        phoneEdit->setText(phone);
+    emailEdit->setText(email);
+    phoneEdit->setText(phone);
     privateCheckBox->setChecked(isPrivate);
     if (!avatarBase64.isEmpty()) {
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
         if (!pixmap.isNull()) {
-            avatarLabel->setPixmap(
-                pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            avatarLabel->setStyleSheet("border-radius: 32px;");
+            QPixmap cropped = pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap rounded(cropped.size());
+            rounded.fill(Qt::transparent);
+            QPainter painter(&rounded);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(QBrush(cropped));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
+            avatarLabel->setPixmap(rounded);
+            avatarLabel->setStyleSheet("border: none;");
         }
     }
 }
@@ -58,8 +63,7 @@ void EditProfileDialog::setupUI() {
     avatarLayout->addStretch();
     avatarLabel = new QLabel(this);
     avatarLabel->setFixedSize(64, 64);
-    avatarLabel->setStyleSheet(
-        "border: 1px solid #ccc; border-radius: 32px; background-color: #e0e0e0;");
+    avatarLabel->setStyleSheet("border: none; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
     avatarLabel->setCursor(Qt::PointingHandCursor);
@@ -129,46 +133,36 @@ void EditProfileDialog::setupUI() {
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
-void EditProfileDialog::setupPasswordUI() {}
-
 void EditProfileDialog::chooseAvatar() {
     QString filePath = QFileDialog::getOpenFileName(this, "Select Avatar", "",
                                                     "Images (*.png *.jpg *.jpeg *.bmp)");
     if (filePath.isEmpty())
         return;
-    QString base64 = cropAndToBase64(filePath);
-    if (base64.isEmpty()) {
+    QImage image(filePath);
+    if (image.isNull()) {
         showMessage("Failed to load image", ":/sources/warning_01.png");
         return;
     }
-    avatarBase64 = base64;
-    QPixmap pixmap;
-    pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
-    if (!pixmap.isNull()) {
-        avatarLabel->setPixmap(
-            pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        avatarLabel->setStyleSheet("border-radius: 32px;");
-    }
-}
-
-QString EditProfileDialog::cropAndToBase64(const QString &filePath) {
-    QImage image(filePath);
-    if (image.isNull())
-        return QString();
     int size = qMin(image.width(), image.height());
     int x = (image.width() - size) / 2;
     int y = (image.height() - size) / 2;
     QImage cropped = image.copy(x, y, size, size);
-    const int maxSize = 64;
-    if (cropped.width() > maxSize || cropped.height() > maxSize) {
-        cropped = cropped.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
+    QImage scaled = cropped.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap rounded(scaled.size());
+    rounded.fill(Qt::transparent);
+    QPainter painter(&rounded);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setBrush(QBrush(QPixmap::fromImage(scaled)));
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
+    avatarLabel->setPixmap(rounded);
+    avatarLabel->setStyleSheet("border: none;");
     QByteArray byteArray;
     QBuffer buffer(&byteArray);
     buffer.open(QIODevice::WriteOnly);
-    cropped.save(&buffer, "JPEG", 85);
+    scaled.save(&buffer, "PNG");
     buffer.close();
-    return QString::fromLatin1(byteArray.toBase64());
+    avatarBase64 = QString::fromLatin1(byteArray.toBase64());
 }
 
 void EditProfileDialog::showMessage(const QString &text, const QString &iconPath) {

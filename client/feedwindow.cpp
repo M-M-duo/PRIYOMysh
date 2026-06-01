@@ -94,15 +94,22 @@ public:
 
         QLabel *avatarLabel = new QLabel(this);
         avatarLabel->setFixedSize(24, 24);
-        avatarLabel->setStyleSheet("border-radius: 12px; background-color: #cccccc;");
+        avatarLabel->setStyleSheet("border: none; background-color: #cccccc; border-radius: 12px;");
         if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
             QString base64 = post["author_avatar"].toString();
             QPixmap pixmap;
             pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
             if (!pixmap.isNull()) {
-                avatarLabel->setPixmap(
-                    pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-                avatarLabel->setStyleSheet("border-radius: 12px;");
+                QPixmap rounded(24, 24);
+                rounded.fill(Qt::transparent);
+                QPainter painter(&rounded);
+                painter.setRenderHint(QPainter::Antialiasing);
+                painter.setBrush(
+                    QBrush(pixmap.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+                painter.setPen(Qt::NoPen);
+                painter.drawRoundedRect(0, 0, 24, 24, 12, 12);
+                avatarLabel->setPixmap(rounded);
+                avatarLabel->setStyleSheet("border: none;");
             }
         }
         authorLayout->addWidget(avatarLabel);
@@ -368,8 +375,7 @@ void FeedWindow::setupUI() {
     topRow->setSpacing(10);
     avatarLabel = new QLabel(this);
     avatarLabel->setFixedSize(60, 60);
-    avatarLabel->setStyleSheet(
-        "border: 1px solid #ccc; border-radius: 30px; background-color: #e0e0e0;");
+    avatarLabel->setStyleSheet("border: none; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
     topRow->addWidget(avatarLabel);
@@ -673,9 +679,16 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            avatarLabel->setPixmap(
-                pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            avatarLabel->setStyleSheet("border-radius: 30px;");
+            QPixmap rounded(60, 60);
+            rounded.fill(Qt::transparent);
+            QPainter painter(&rounded);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(
+                QBrush(pixmap.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(0, 0, 60, 60, 30, 30);
+            avatarLabel->setPixmap(rounded);
+            avatarLabel->setStyleSheet("border: none;");
         }
     }
 
