@@ -82,6 +82,7 @@ public:
     PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr)
         : QWidget(parent), feedWindow(parent), currentImageIndex(0) {
         QVBoxLayout *mainLayout = new QVBoxLayout(this);
+        postId = post["id"].toString();
         mainLayout->setSpacing(5);
         mainLayout->setContentsMargins(0, 5, 0, 5);
         mainLayout->setAlignment(Qt::AlignCenter);
@@ -1116,7 +1117,7 @@ void FeedWindow::onEditProfileClicked() {
                         qDebug().noquote() << QString::fromUtf8(updateData);
 
                         QNetworkReply *updateReply =
-                            networkManager->sendCustomRequest(updateRequest, "GET", updateData);
+                            networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
                         qDebug().noquote()
                             << "=== Sending PATCH request to" << updateUrl.toString();
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
