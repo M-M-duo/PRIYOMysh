@@ -94,7 +94,7 @@ public:
         authorLayout->setSpacing(10);
 
         QLabel *avatarLabel = new QLabel(this);
-        avatarLabel->setFixedSize(24, 24);
+        avatarLabel->setFixedSize(32, 32);
         avatarLabel->setStyleSheet("border: none; background-color: #cccccc; border-radius: 12px;");
         avatarLabel->setScaledContents(true);
         if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
@@ -110,7 +110,7 @@ public:
                 painter.setRenderHint(QPainter::Antialiasing);
                 painter.setBrush(QBrush(scaled));
                 painter.setPen(Qt::NoPen);
-                painter.drawRoundedRect(0, 0, 48, 48, 24, 24);
+                painter.drawRoundedRect(0, 0, 48, 48, 32, 32);
                 avatarLabel->setPixmap(rounded);
                 avatarLabel->setStyleSheet("border: none;");
             }
