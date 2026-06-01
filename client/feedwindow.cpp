@@ -94,21 +94,23 @@ public:
         authorLayout->setSpacing(10);
 
         QLabel *avatarLabel = new QLabel(this);
-        avatarLabel->setFixedSize(64, 64);
+        avatarLabel->setFixedSize(24, 24);
         avatarLabel->setStyleSheet("border: none; background-color: #cccccc; border-radius: 12px;");
+        avatarLabel->setScaledContents(true);
         if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
             QString base64 = post["author_avatar"].toString();
             QPixmap pixmap;
             pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
             if (!pixmap.isNull()) {
-                QPixmap rounded(64, 64);
+                QPixmap scaled =
+                    pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                QPixmap rounded(48, 48);
                 rounded.fill(Qt::transparent);
                 QPainter painter(&rounded);
                 painter.setRenderHint(QPainter::Antialiasing);
-                painter.setBrush(
-                    QBrush(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+                painter.setBrush(QBrush(scaled));
                 painter.setPen(Qt::NoPen);
-                painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
+                painter.drawRoundedRect(0, 0, 48, 48, 24, 24);
                 avatarLabel->setPixmap(rounded);
                 avatarLabel->setStyleSheet("border: none;");
             }
@@ -156,12 +158,10 @@ public:
             actionRow->setSpacing(0);
 
             actionRow->addStretch();
-
             prevButton = new QPushButton("◀", this);
             prevButton->setFixedSize(40, 40);
             prevButton->setEnabled(cachedImages.size() > 1 && currentImageIndex > 0);
             actionRow->addWidget(prevButton);
-
             actionRow->addStretch();
 
             likeButton = new QPushButton(this);
@@ -180,7 +180,6 @@ public:
             likesLayout->addWidget(likeButton);
             likesLayout->addWidget(dislikeButton);
             actionRow->addLayout(likesLayout);
-
             actionRow->addStretch();
 
             nextButton = new QPushButton("▶", this);
@@ -188,7 +187,6 @@ public:
             nextButton->setEnabled(cachedImages.size() > 1 &&
                                    currentImageIndex < cachedImages.size() - 1);
             actionRow->addWidget(nextButton);
-
             actionRow->addStretch();
 
             mainLayout->addLayout(actionRow);
@@ -379,6 +377,7 @@ void FeedWindow::setupUI() {
     avatarLabel->setStyleSheet("border: none; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
+    avatarLabel->setScaledContents(true);
     topRow->addWidget(avatarLabel);
     profileLoginLabel = new QLabel("", this);
     profileLoginLabel->setStyleSheet("font-weight: bold; font-size: 16px;");
@@ -680,14 +679,14 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap rounded(80, 80);
+            QPixmap scaled = pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap rounded(120, 120);
             rounded.fill(Qt::transparent);
             QPainter painter(&rounded);
             painter.setRenderHint(QPainter::Antialiasing);
-            painter.setBrush(
-                QBrush(pixmap.scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+            painter.setBrush(QBrush(scaled));
             painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(0, 0, 80, 80, 40, 40);
+            painter.drawRoundedRect(0, 0, 120, 120, 60, 60);
             avatarLabel->setPixmap(rounded);
             avatarLabel->setStyleSheet("border: none;");
         }

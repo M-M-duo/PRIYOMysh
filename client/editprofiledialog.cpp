@@ -33,14 +33,14 @@ EditProfileDialog::EditProfileDialog(const QString &login, const QString &email,
         QPixmap pixmap;
         pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
         if (!pixmap.isNull()) {
-            QPixmap cropped = pixmap.scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            QPixmap rounded(cropped.size());
+            QPixmap scaled = pixmap.scaled(128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap rounded(128, 128);
             rounded.fill(Qt::transparent);
             QPainter painter(&rounded);
             painter.setRenderHint(QPainter::Antialiasing);
-            painter.setBrush(QBrush(cropped));
+            painter.setBrush(QBrush(scaled));
             painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(0, 0, 80, 80, 40, 40);
+            painter.drawRoundedRect(0, 0, 128, 128, 64, 64);
             avatarLabel->setPixmap(rounded);
             avatarLabel->setStyleSheet("border: none;");
         }
@@ -63,10 +63,11 @@ void EditProfileDialog::setupUI() {
     QHBoxLayout *avatarLayout = new QHBoxLayout();
     avatarLayout->addStretch();
     avatarLabel = new QLabel(this);
-    avatarLabel->setFixedSize(80, 80);
+    avatarLabel->setFixedSize(64, 64);
     avatarLabel->setStyleSheet("border: none; background-color: #e0e0e0;");
     avatarLabel->setAlignment(Qt::AlignCenter);
     avatarLabel->setText("🖼️");
+    avatarLabel->setScaledContents(true);
     avatarLabel->setCursor(Qt::PointingHandCursor);
     avatarLabel->installEventFilter(this);
     avatarLayout->addWidget(avatarLabel);
@@ -81,14 +82,14 @@ void EditProfileDialog::setupUI() {
 
     layout->addWidget(new QLabel("Email:"));
     emailEdit = new QLineEdit(this);
-    // emailEdit->setPlaceholderText("example@mail.ru");
+    emailEdit->setPlaceholderText("example@mail.ru");
     emailEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
                              "border-radius: 10px; padding: 8px;");
     layout->addWidget(emailEdit);
 
     layout->addWidget(new QLabel("Phone:"));
     phoneEdit = new QLineEdit(this);
-    // phoneEdit->setPlaceholderText("+7 910 294 10 01");
+    phoneEdit->setPlaceholderText("+7 910 294 10 01");
     phoneEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
                              "border-radius: 10px; padding: 8px;");
     layout->addWidget(phoneEdit);
@@ -148,14 +149,14 @@ void EditProfileDialog::chooseAvatar() {
     int x = (image.width() - size) / 2;
     int y = (image.height() - size) / 2;
     QImage cropped = image.copy(x, y, size, size);
-    QImage scaled = cropped.scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    QPixmap rounded(scaled.size());
+    QImage scaled = cropped.scaled(128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap rounded(128, 128);
     rounded.fill(Qt::transparent);
     QPainter painter(&rounded);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setBrush(QBrush(QPixmap::fromImage(scaled)));
     painter.setPen(Qt::NoPen);
-    painter.drawRoundedRect(0, 0, 80, 80, 40, 40);
+    painter.drawRoundedRect(0, 0, 128, 128, 64, 64);
     avatarLabel->setPixmap(rounded);
     avatarLabel->setStyleSheet("border: none;");
     QByteArray byteArray;
