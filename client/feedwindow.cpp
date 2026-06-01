@@ -1116,7 +1116,7 @@ void FeedWindow::onEditProfileClicked() {
                         qDebug().noquote() << QString::fromUtf8(updateData);
 
                         QNetworkReply *updateReply =
-                            networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
+                            networkManager->sendCustomRequest(updateRequest, "GET", updateData);
                         qDebug().noquote()
                             << "=== Sending PATCH request to" << updateUrl.toString();
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
