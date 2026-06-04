@@ -22,11 +22,11 @@ public:
     ~FeedWindow();
 
     void loadFeed(bool friendsOnly = false);
-    void loadProfile(const QString &login);
+    void loadProfile(const QString &id);
     void loadMyProfile();
 
 public slots:
-    void onAuthorClicked(const QString &author);
+    void onAuthorClicked(const QString &authorId);
     void onLikeDislike(const QString &postId, bool isLike);
 
 private slots:
@@ -51,12 +51,15 @@ private slots:
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
+    QString myActualId;
     QString myActualLogin;
-    int currentOffset;
+    QString lastPostDate;
+    QString lastPostId;
     int limit;
     bool friendsFeed;
     bool isOwnProfile;
     bool isProfileMode;
+    QString currentProfileId;
     QString currentProfileLogin;
 
     QScrollArea *scrollArea;

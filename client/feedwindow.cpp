@@ -1,3 +1,4 @@
+// feedwindow.cpp
 #include "feedwindow.h"
 #include "editprofiledialog.h"
 #include "friendfinder.h"
@@ -87,7 +88,8 @@ public:
         mainLayout->setContentsMargins(0, 5, 0, 5);
         mainLayout->setAlignment(Qt::AlignCenter);
 
-        postId = post["id"].toString();
+        postId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+        authorId = post["author_id"].isString() ? post["author_id"].toString() : QString::number(post["author_id"].toInt());
 
         QHBoxLayout *authorLayout = new QHBoxLayout();
         authorLayout->setContentsMargins(20, 0, 20, 0);
@@ -260,8 +262,6 @@ public:
         line->setFixedWidth(440);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
-        author = post["author"].toString();
-
         if (hasImages) {
             connect(prevButton, &QPushButton::clicked, this, &PostWidget::prevImage);
             connect(nextButton, &QPushButton::clicked, this, &PostWidget::nextImage);
@@ -316,15 +316,14 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override {
         if (event->type() == QEvent::MouseButtonPress && obj == authorLabel) {
             if (feedWindow) {
-                qDebug() << "Author clicked:" << author;
-                feedWindow->onAuthorClicked(author);
+                feedWindow->onAuthorClicked(authorId);
             }
             return true;
         }
         return QWidget::eventFilter(obj, event);
     }
 
-    QString author;
+    QString authorId;
     QString postId;
     FeedWindow *feedWindow;
     QLabel *authorLabel;
@@ -343,7 +342,7 @@ protected:
 };
 
 FeedWindow::FeedWindow(const QString &token, QWidget *parent)
-    : QMainWindow(parent), authToken(token), currentOffset(0), limit(10), friendsFeed(false),
+    : QMainWindow(parent), authToken(token), limit(10), friendsFeed(false),
       isOwnProfile(false), isProfileMode(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
@@ -585,21 +584,22 @@ void FeedWindow::loadFeed(bool friendsOnly) {
     friendsFeed = friendsOnly;
     sharedButton->setChecked(!friendsFeed);
     followButton->setChecked(friendsFeed);
-    currentOffset = 0;
+    lastPostDate.clear();
+    lastPostId.clear();
     clearPosts();
     showFeedButtons();
     loadPosts(false);
 }
 
-void FeedWindow::loadProfile(const QString &login) {
-    currentProfileLogin = login;
+void FeedWindow::loadProfile(const QString &id) {
+    currentProfileId = id;
     isProfileMode = true;
-    isOwnProfile = (login == myActualLogin);
+    isOwnProfile = (id == myActualId || id == "me");
     profileHeader->setVisible(false);
     backButton->setVisible(true);
     showProfileButtons();
 
-    QString endpoint = QString("%1/api/profiles/%2").arg(API_BASE_URL, login);
+    QString endpoint = QString("%1/api/profiles/%2").arg(API_BASE_URL, id);
     QUrl url(endpoint);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -610,7 +610,7 @@ void FeedWindow::loadProfile(const QString &login) {
 }
 
 void FeedWindow::loadMyProfile() {
-    loadProfile(myActualLogin);
+    loadProfile(myActualId.isEmpty() ? "me" : myActualId);
 }
 
 void FeedWindow::fetchMyLogin() {
@@ -629,6 +629,10 @@ void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
+            myActualId = obj["id"].isString() ? obj["id"].toString() : QString::number(obj["id"].toInt());
+            if (myActualId.isEmpty()) {
+                myActualId = "me";
+            }
             myActualLogin = obj["login"].toString();
         } else {
             showCustomMessage(this, "Failed to get own login", ":/sources/warning_01.png");
@@ -643,12 +647,10 @@ void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
 void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug().noquote() << "===server=> ";
-        qDebug().noquote() << QString::fromUtf8(response);
-        qDebug().noquote() << "";
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject()) {
             QJsonObject profile = doc.object();
+            currentProfileLogin = profile["login"].toString();
             updateProfileHeader(profile);
             profileHeader->setVisible(true);
             bool allowedToSee = profile["allowedToSee"].toBool();
@@ -753,41 +755,45 @@ void FeedWindow::clearPosts() {
 void FeedWindow::addPost(const QJsonObject &post) {
     PostWidget *widget = new PostWidget(post, this);
     postsLayout->addWidget(widget);
-    m_postWidgets[post["id"].toString()] = widget;
+    QString pId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+    m_postWidgets[pId] = widget;
 }
 
 void FeedWindow::loadPosts(bool append) {
     if (!append) {
-        currentOffset = 0;
+        lastPostDate.clear();
+        lastPostId.clear();
         clearPosts();
     }
+    
+    QString cursorParam;
+    if (append && !lastPostId.isEmpty() && !lastPostDate.isEmpty()) {
+        cursorParam = QString("&cursor=%1:%2").arg(lastPostDate, lastPostId);
+    }
+
     QString endpoint;
     if (isProfileMode) {
-        endpoint = QString("%1/api/posts/feed/%2?limit=%3&offset=%4")
-                       .arg(API_BASE_URL, currentProfileLogin)
+        endpoint = QString("%1/api/posts/feed/%2?limit=%3%4")
+                       .arg(API_BASE_URL, currentProfileId)
                        .arg(limit)
-                       .arg(currentOffset);
+                       .arg(cursorParam);
     } else {
         if (friendsFeed) {
-            endpoint = QString("%1/api/posts/feed/follow?limit=%2&offset=%3")
+            endpoint = QString("%1/api/posts/feed/follow?limit=%2%3")
                            .arg(API_BASE_URL)
                            .arg(limit)
-                           .arg(currentOffset);
+                           .arg(cursorParam);
         } else {
-            endpoint = QString("%1/api/posts/feed?limit=%2&offset=%3")
+            endpoint = QString("%1/api/posts/feed?limit=%2%3")
                            .arg(API_BASE_URL)
                            .arg(limit)
-                           .arg(currentOffset);
+                           .arg(cursorParam);
         }
     }
     QUrl url(endpoint);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-
-    qDebug().noquote() << "===client=> " << url.toString();
-    qDebug().noquote() << "GET request with Authorization header";
-    qDebug().noquote() << "";
 
     loadingLabel->setVisible(true);
     loadMoreButton->setVisible(false);
@@ -796,7 +802,6 @@ void FeedWindow::loadPosts(bool append) {
 }
 
 void FeedWindow::loadMore() {
-    currentOffset += limit;
     loadPosts(true);
 }
 
@@ -831,10 +836,6 @@ void FeedWindow::onCreatePost() {
         QJsonDocument doc(json);
         QByteArray data = doc.toJson();
 
-        qDebug().noquote() << "===client=> " << url.toString();
-        qDebug().noquote() << QString::fromUtf8(data);
-        qDebug().noquote() << "";
-
         QNetworkReply *reply = networkManager->post(request, data);
         connect(reply, &QNetworkReply::finished, [this, reply]() { onPostReplyFinished(reply); });
     }
@@ -853,23 +854,19 @@ void FeedWindow::onBackClicked() {
     resetToMainFeed();
 }
 
-void FeedWindow::onAuthorClicked(const QString &author) {
-    if (author == myActualLogin) {
+void FeedWindow::onAuthorClicked(const QString &authorId) {
+    if (authorId == myActualId) {
         loadMyProfile();
     } else {
-        loadProfile(author);
+        loadProfile(authorId);
     }
 }
 
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        qDebug().noquote() << "===server=> ";
-        qDebug().noquote() << QString::fromUtf8(response);
-        qDebug().noquote() << "";
         showCustomMessage(this, "Post created successfully", ":/sources/warn_happy.png");
         if (isProfileMode) {
-            loadProfile(currentProfileLogin);
+            loadProfile(currentProfileId);
         } else {
             loadFeed(friendsFeed);
         }
@@ -880,7 +877,6 @@ void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
         if (doc.isObject() && doc.object().contains("reason")) {
             errorMsg = doc.object()["reason"].toString();
         }
-        qDebug().noquote() << "===server error=> " << errorMsg;
         showCustomMessage(this, "Failed to create post: " + errorMsg, ":/sources/warning_01.png");
     }
     reply->deleteLater();
@@ -890,14 +886,14 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
     loadingLabel->setVisible(false);
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        qDebug().noquote() << "===server=> ";
-        qDebug().noquote() << QString::fromUtf8(response);
-        qDebug().noquote() << "";
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isArray()) {
             QJsonArray posts = doc.array();
-            for (const auto &post : posts) {
-                addPost(post.toObject());
+            for (const auto &postVal : posts) {
+                QJsonObject post = postVal.toObject();
+                addPost(post);
+                lastPostId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+                lastPostDate = post["createdAt"].toString();
             }
             if (posts.size() == limit) {
                 loadMoreButton->setVisible(true);
@@ -914,7 +910,6 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
         if (doc.isObject() && doc.object().contains("reason")) {
             errorMsg = doc.object()["reason"].toString();
         }
-        qDebug().noquote() << "===server error=> " << errorMsg;
         showCustomMessage(this, "Failed to load feed: " + errorMsg, ":/sources/warning_01.png");
         loadMoreButton->setVisible(false);
     }
@@ -936,14 +931,14 @@ void FeedWindow::onFollowFromProfile() {
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
     QJsonObject json;
-    json["login"] = currentProfileLogin;
+    json["id"] = currentProfileId;
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             showCustomMessage(this, "Followed " + currentProfileLogin, ":/sources/warn_happy.png");
-            loadProfile(currentProfileLogin);
+            loadProfile(currentProfileId);
         } else {
             showCustomMessage(this, "Failed to follow", ":/sources/warning_01.png");
         }
@@ -958,7 +953,7 @@ void FeedWindow::onUnfollowFromProfile() {
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
     QJsonObject json;
-    json["login"] = currentProfileLogin;
+    json["id"] = currentProfileId;
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
@@ -966,7 +961,7 @@ void FeedWindow::onUnfollowFromProfile() {
         if (reply->error() == QNetworkReply::NoError) {
             showCustomMessage(this, "Unfollowed " + currentProfileLogin,
                               ":/sources/warn_happy.png");
-            loadProfile(currentProfileLogin);
+            loadProfile(currentProfileId);
         } else {
             showCustomMessage(this, "Failed to unfollow", ":/sources/warning_01.png");
         }
@@ -992,8 +987,6 @@ void FeedWindow::onLikeDislike(const QString &postId, bool isLike) {
                 int dislikes = doc.object()["dislikesCount"].toInt();
                 updatePostReaction(postId, likes, dislikes);
             }
-        } else {
-            qDebug() << "Reaction error:" << reply->errorString();
         }
         reply->deleteLater();
     });
@@ -1026,10 +1019,13 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                 if (users.isEmpty()) {
                     listWidget->addItem("No users found");
                 } else {
-                    for (const auto &user : users) {
-                        if (user.isObject()) {
-                            QString login = user.toObject()["login"].toString();
-                            listWidget->addItem(login);
+                    for (const auto &userVal : users) {
+                        if (userVal.isObject()) {
+                            QJsonObject user = userVal.toObject();
+                            QString login = user["login"].toString();
+                            QString id = user["id"].isString() ? user["id"].toString() : QString::number(user["id"].toInt());
+                            QListWidgetItem *item = new QListWidgetItem(login, listWidget);
+                            item->setData(Qt::UserRole, id);
                         }
                     }
                 }
@@ -1039,10 +1035,10 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                 connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
                 connect(listWidget, &QListWidget::itemClicked,
                         [this, &dialog](QListWidgetItem *item) {
-                            QString login = item->text();
-                            if (login != "No users found") {
+                            QString id = item->data(Qt::UserRole).toString();
+                            if (!id.isEmpty()) {
                                 dialog.accept();
-                                loadProfile(login);
+                                loadProfile(id);
                             }
                         });
                 dialog.exec();
@@ -1058,27 +1054,26 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
 }
 
 void FeedWindow::onFollowersClicked() {
-    QString login = isProfileMode ? currentProfileLogin : myActualLogin;
-    if (login.isEmpty()) {
-        showCustomMessage(this, "Cannot determine login", ":/sources/warning_01.png");
+    QString id = isProfileMode ? currentProfileId : myActualId;
+    if (id.isEmpty()) {
+        showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;
     }
-    QString endpoint = QString("/api/friends/%1/followers").arg(login);
+    QString endpoint = QString("/api/friends/%1/followers").arg(id);
     showUserList("Followers", endpoint);
 }
 
 void FeedWindow::onFollowingClicked() {
-    QString login = isProfileMode ? currentProfileLogin : myActualLogin;
-    if (login.isEmpty()) {
-        showCustomMessage(this, "Cannot determine login", ":/sources/warning_01.png");
+    QString id = isProfileMode ? currentProfileId : myActualId;
+    if (id.isEmpty()) {
+        showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;
     }
-    QString endpoint = QString("/api/friends/%1/following").arg(login);
+    QString endpoint = QString("/api/friends/%1/following").arg(id);
     showUserList("Following", endpoint);
 }
 
 void FeedWindow::onEditProfileClicked() {
-    qDebug().noquote() << "=== Edit Profile: Fetching current profile data ===";
     QUrl url(API_BASE_URL + "/api/me/profile");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -1088,9 +1083,6 @@ void FeedWindow::onEditProfileClicked() {
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray response = reply->readAll();
-            qDebug().noquote() << "=== Server response (profile data):";
-            qDebug().noquote() << QString::fromUtf8(response);
-
             QJsonDocument doc = QJsonDocument::fromJson(response);
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
@@ -1108,7 +1100,6 @@ void FeedWindow::onEditProfileClicked() {
                     &dialog, &EditProfileDialog::profileUpdated,
                     [this](const QString &login, const QString &email, const QString &phone,
                            bool isPrivate, const QString &avatarBase64) {
-                        qDebug().noquote() << "=== Saving profile updates using PATCH request ===";
                         QUrl updateUrl(API_BASE_URL + "/api/me/profile");
                         QNetworkRequest updateRequest(updateUrl);
                         updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -1127,18 +1118,11 @@ void FeedWindow::onEditProfileClicked() {
                         }
 
                         QByteArray updateData = QJsonDocument(updateJson).toJson();
-                        qDebug().noquote() << "=== PATCH request body:";
-                        qDebug().noquote() << QString::fromUtf8(updateData);
 
                         QNetworkReply *updateReply =
                             networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
-                        qDebug().noquote()
-                            << "=== Sending PATCH request to" << updateUrl.toString();
                         connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
                             if (updateReply->error() == QNetworkReply::NoError) {
-                                QByteArray response = updateReply->readAll();
-                                qDebug().noquote() << "=== Profile update response:";
-                                qDebug().noquote() << QString::fromUtf8(response);
                                 showCustomMessage(this, "Profile updated",
                                                   ":/sources/warn_happy.png");
                                 loadMyProfile();
@@ -1149,11 +1133,6 @@ void FeedWindow::onEditProfileClicked() {
                                 if (doc.isObject() && doc.object().contains("reason")) {
                                     errorMsg = doc.object()["reason"].toString();
                                 }
-                                qDebug().noquote() << "=== Profile update ERROR:";
-                                qDebug().noquote() << "HTTP method: PATCH";
-                                qDebug().noquote() << "HTTP error:" << updateReply->errorString();
-                                qDebug().noquote()
-                                    << "Response body:" << QString::fromUtf8(response);
                                 showCustomMessage(this, "Update failed: " + errorMsg,
                                                   ":/sources/warning_01.png");
                             }
@@ -1161,8 +1140,6 @@ void FeedWindow::onEditProfileClicked() {
                         });
                     });
                 dialog.exec();
-            } else {
-                qDebug().noquote() << "=== Profile data response is not a JSON object";
             }
         } else {
             QByteArray response = reply->readAll();
@@ -1171,9 +1148,6 @@ void FeedWindow::onEditProfileClicked() {
             if (doc.isObject() && doc.object().contains("reason")) {
                 errorMsg = doc.object()["reason"].toString();
             }
-            qDebug().noquote() << "=== Failed to fetch profile data:";
-            qDebug().noquote() << "HTTP error:" << reply->errorString();
-            qDebug().noquote() << "Response body:" << QString::fromUtf8(response);
             showCustomMessage(this, "Failed to load profile data: " + errorMsg,
                               ":/sources/warning_01.png");
         }

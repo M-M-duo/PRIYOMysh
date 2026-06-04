@@ -1,3 +1,4 @@
+// friendfinder.h
 #ifndef FRIENDFINDER_H
 #define FRIENDFINDER_H
 
@@ -32,7 +33,7 @@ private:
     QNetworkAccessManager *networkManager;
     QString authToken;
     FeedWindow *parentFeedWindow;
-    QString currentSearchLogin;
+    QString currentSearchId;
     bool isFollowing;
     bool isMutual;
 

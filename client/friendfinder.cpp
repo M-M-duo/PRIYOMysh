@@ -1,3 +1,4 @@
+// friendfinder.cpp
 #include "friendfinder.h"
 #include "feedwindow.h"
 #include <QDebug>
@@ -98,7 +99,6 @@ void FriendFinder::searchUser() {
         return;
     }
     clearResult();
-    currentSearchLogin = login;
 
     QUrl url(QString("%1/api/friends/search/%2").arg(API_BASE_URL, login));
     QNetworkRequest request(url);
@@ -117,10 +117,11 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
+            currentSearchId = obj["id"].isString() ? obj["id"].toString() : QString::number(obj["id"].toInt());
+            
             bool isFollowed = obj["isFollowed"].toBool();
             bool isMe = obj["isMe"].toBool();
 
-            currentSearchLogin = login;
             isFollowing = isFollowed;
 
             resultLabel->setText(login);
@@ -152,7 +153,7 @@ void FriendFinder::followUser() {
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
     QJsonObject json;
-    json["login"] = currentSearchLogin;
+    json["id"] = currentSearchId;
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
@@ -161,7 +162,7 @@ void FriendFinder::followUser() {
 
 void FriendFinder::onFollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        showMessage(this, "Followed " + currentSearchLogin, QMessageBox::Information);
+        showMessage(this, "Followed successfully", QMessageBox::Information);
         isFollowing = true;
         statusLabel->setText("You follow");
         actionButton->setText("Unfollow");
@@ -179,7 +180,7 @@ void FriendFinder::unfollowUser() {
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
     QJsonObject json;
-    json["login"] = currentSearchLogin;
+    json["id"] = currentSearchId;
     QByteArray data = QJsonDocument(json).toJson();
 
     QNetworkReply *reply = networkManager->post(request, data);
@@ -188,7 +189,7 @@ void FriendFinder::unfollowUser() {
 
 void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
-        showMessage(this, "Unfollowed " + currentSearchLogin, QMessageBox::Information);
+        showMessage(this, "Unfollowed successfully", QMessageBox::Information);
         isFollowing = false;
         statusLabel->setText("Not followed");
         actionButton->setText("Follow");
@@ -200,8 +201,8 @@ void FriendFinder::onUnfollowFinished(QNetworkReply *reply) {
 }
 
 void FriendFinder::onViewProfile() {
-    if (!currentSearchLogin.isEmpty() && parentFeedWindow) {
-        parentFeedWindow->loadProfile(currentSearchLogin);
+    if (!currentSearchId.isEmpty() && parentFeedWindow) {
+        parentFeedWindow->loadProfile(currentSearchId);
         close();
     }
 }

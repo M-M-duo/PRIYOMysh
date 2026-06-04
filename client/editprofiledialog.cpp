@@ -51,13 +51,13 @@ EditProfileDialog::~EditProfileDialog() {}
 
 void EditProfileDialog::setupUI() {
     setWindowTitle("Edit Profile");
-    setFixedSize(300, 450);
     setModal(true);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetFixedSize); 
     layout->setAlignment(Qt::AlignCenter);
 
     QHBoxLayout *avatarLayout = new QHBoxLayout();
@@ -105,14 +105,21 @@ void EditProfileDialog::setupUI() {
     passwordWidget = new QWidget(this);
     passwordWidget->setVisible(false);
     QVBoxLayout *pwdLayout = new QVBoxLayout(passwordWidget);
+    
     pwdLayout->addWidget(new QLabel("Current password:"));
     currentPasswordEdit = new QLineEdit(this);
     currentPasswordEdit->setEchoMode(QLineEdit::Password);
+    currentPasswordEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
+                                       "border-radius: 10px; padding: 8px;");
     pwdLayout->addWidget(currentPasswordEdit);
+    
     pwdLayout->addWidget(new QLabel("New password:"));
     newPasswordEdit = new QLineEdit(this);
     newPasswordEdit->setEchoMode(QLineEdit::Password);
+    newPasswordEdit->setStyleSheet("background-color: rgba(200,200,200,0.1); border: none; "
+                                   "border-radius: 10px; padding: 8px;");
     pwdLayout->addWidget(newPasswordEdit);
+    
     QHBoxLayout *pwdButtonLayout = new QHBoxLayout();
     updatePasswordButton = new QPushButton("Update", this);
     cancelPasswordButton = new QPushButton("Cancel", this);
@@ -120,10 +127,12 @@ void EditProfileDialog::setupUI() {
     pwdButtonLayout->addWidget(cancelPasswordButton);
     pwdLayout->addLayout(pwdButtonLayout);
     layout->addWidget(passwordWidget);
+    
     connect(updatePasswordButton, &QPushButton::clicked, this,
             &EditProfileDialog::onPasswordUpdated);
     connect(cancelPasswordButton, &QPushButton::clicked, [this]() {
         passwordWidget->setVisible(false);
+        changePasswordButton->setVisible(true);
         currentPasswordEdit->clear();
         newPasswordEdit->clear();
     });
@@ -195,6 +204,7 @@ void EditProfileDialog::onSaveClicked() {
 }
 
 void EditProfileDialog::onChangePasswordClicked() {
+    changePasswordButton->setVisible(false);
     passwordWidget->setVisible(true);
 }
 
@@ -221,6 +231,7 @@ void EditProfileDialog::onPasswordUpdated() {
     if (reply->error() == QNetworkReply::NoError) {
         showMessage("Password updated successfully", ":/sources/warn_happy.png");
         passwordWidget->setVisible(false);
+        changePasswordButton->setVisible(true);
         currentPasswordEdit->clear();
         newPasswordEdit->clear();
     } else {

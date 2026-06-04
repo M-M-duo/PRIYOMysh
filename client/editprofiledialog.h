@@ -5,6 +5,7 @@
 #include <QDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 
 class EditProfileDialog : public QDialog {
     Q_OBJECT
@@ -48,4 +49,4 @@ private:
     void showMessage(const QString &text, const QString &iconPath);
 };
 
-#endif
+#endif // EDITPROFILEDIALOG_H
