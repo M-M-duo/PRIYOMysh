@@ -73,16 +73,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     topWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QVBoxLayout *topLayout = new QVBoxLayout(topWidget);
     topLayout->setAlignment(Qt::AlignCenter);
+    
     QLabel *logoLabel = new QLabel(this);
     logoLabel->setFixedSize(360, 360);
-    logoLabel->setAlignment(Qt::AlignCenter);
+    logoLabel->setScaledContents(true);
     QPixmap logoPixmap(":/sources/enter_logo.png");
     if (!logoPixmap.isNull()) {
-    logoLabel->setPixmap(logoPixmap.scaled(logoLabel->size(), 
-                         Qt::KeepAspectRatio, 
-                         Qt::SmoothTransformation));
+        logoLabel->setPixmap(logoPixmap);
     } else {
-    logoLabel->setText("Logo");
+        logoLabel->setText("Logo");
     }
     logoLabel->setAlignment(Qt::AlignCenter);
     topLayout->addWidget(logoLabel);
