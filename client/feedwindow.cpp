@@ -48,7 +48,7 @@ static QString wrapText(const QString &text, int maxLineLength) {
     QStringList words = text.split(' ');
     for (const QString &word : words) {
         if (word.length() > maxLineLength) {
-            if (!currentLine.isEmpty()) {
+            if (!currentLine.isEmpty()) { // обрабокта супер-длинного слова
                 result += currentLine + "\n";
                 currentLine.clear();
             }
@@ -87,8 +87,11 @@ public:
         mainLayout->setContentsMargins(0, 5, 0, 5);
         mainLayout->setAlignment(Qt::AlignCenter);
 
-        postId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
-        authorId = post["author_id"].isString() ? post["author_id"].toString() : QString::number(post["author_id"].toInt());
+        postId =
+            post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+        authorId = post["author_id"].isString() ? post["author_id"].toString()
+                                                : QString::number(post["author_id"].toInt());
+        isMePost = post["isMe"].toBool();
 
         QHBoxLayout *authorLayout = new QHBoxLayout();
         authorLayout->setContentsMargins(20, 0, 20, 0);
@@ -255,7 +258,7 @@ public:
             mainLayout->addWidget(dateLabel);
         }
 
-        QFrame *line = new QFrame(this);
+        QFrame *line = new QFrame(this); // нижняя разделительная линия
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
         line->setFixedWidth(440);
@@ -315,7 +318,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override {
         if (event->type() == QEvent::MouseButtonPress && obj == authorLabel) {
             if (feedWindow) {
-                feedWindow->onAuthorClicked(authorId);
+                feedWindow->onAuthorClicked(authorId, isMePost);
             }
             return true;
         }
@@ -324,6 +327,7 @@ protected:
 
     QString authorId;
     QString postId;
+    bool isMePost;
     FeedWindow *feedWindow;
     QLabel *authorLabel;
     QList<QPixmap> cachedImages;
@@ -341,11 +345,9 @@ protected:
 };
 
 FeedWindow::FeedWindow(const QString &token, QWidget *parent)
-    : QMainWindow(parent), authToken(token), limit(10), friendsFeed(false),
-      isOwnProfile(false), isProfileMode(false) {
+    : QMainWindow(parent), authToken(token), limit(10), friendsFeed(false), isProfileMode(false) {
     networkManager = new QNetworkAccessManager(this);
     setupUI();
-    fetchMyLogin();
     loadFeed(false);
 }
 
@@ -428,7 +430,7 @@ void FeedWindow::setupUI() {
 
     profileHeader->setVisible(false);
     mainLayout->addWidget(profileHeader);
-
+    // зона отрисовки постов
     scrollArea = new QScrollArea(this);
     scrollWidget = new QWidget();
     postsLayout = new QVBoxLayout(scrollWidget);
@@ -471,7 +473,7 @@ void FeedWindow::setupUI() {
     profileButton->setFixedSize(50, 48);
     sharedButton->setFixedSize(100, 44);
     followButton->setFixedSize(100, 44);
-
+    // вёрстка кнопок внизу окна
     bottomBar->addSpacing(10);
     bottomBar->addWidget(findFriendsButton);
     bottomBar->addSpacing(10);
@@ -530,7 +532,7 @@ void FeedWindow::setupUI() {
             color: white;
         }
     )";
-
+    // привязка downbar кнопок к стилям и функциям
     findFriendsButton->setStyleSheet(transparentButtonStyle(40));
     createPostButton->setStyleSheet(transparentButtonStyle(30));
     profileButton->setStyleSheet(transparentButtonStyle(25));
@@ -593,7 +595,6 @@ void FeedWindow::loadFeed(bool friendsOnly) {
 void FeedWindow::loadProfile(const QString &id) {
     currentProfileId = id;
     isProfileMode = true;
-    isOwnProfile = (id == myActualId || id == "me");
     profileHeader->setVisible(false);
     backButton->setVisible(true);
     showProfileButtons();
@@ -609,38 +610,7 @@ void FeedWindow::loadProfile(const QString &id) {
 }
 
 void FeedWindow::loadMyProfile() {
-    loadProfile(myActualId.isEmpty() ? "me" : myActualId);
-}
-
-void FeedWindow::fetchMyLogin() {
-    QUrl url(API_BASE_URL + "/api/profiles/me");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
-
-    QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply]() { onMyLoginFinished(reply); });
-}
-
-void FeedWindow::onMyLoginFinished(QNetworkReply *reply) {
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(response);
-        if (doc.isObject()) {
-            QJsonObject obj = doc.object();
-            myActualId = obj["id"].isString() ? obj["id"].toString() : QString::number(obj["id"].toInt());
-            if (myActualId.isEmpty()) {
-                myActualId = "me";
-            }
-            myActualLogin = obj["login"].toString();
-        } else {
-            showCustomMessage(this, "Failed to get own login", ":/sources/warning_01.png");
-        }
-    } else {
-        showCustomMessage(this, "Failed to fetch login: " + reply->errorString(),
-                          ":/sources/warning_01.png");
-    }
-    reply->deleteLater();
+    loadProfile("me");
 }
 
 void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
@@ -683,7 +653,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
             QPixmap scaled = pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             QPixmap rounded(120, 120);
             rounded.fill(Qt::transparent);
-            QPainter painter(&rounded);
+            QPainter painter(&rounded); // убрать, картинки уже изначально округляются
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setBrush(QBrush(scaled));
             painter.setPen(Qt::NoPen);
@@ -692,9 +662,8 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
             avatarLabel->setStyleSheet("border: none;");
         }
     }
-
-    bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
-    if (isOwnProfile || isMe) {
+    bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false; // fix
+    if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
         followProfileButton->setText("Edit profile");
         followProfileButton->setEnabled(true);
@@ -754,7 +723,8 @@ void FeedWindow::clearPosts() {
 void FeedWindow::addPost(const QJsonObject &post) {
     PostWidget *widget = new PostWidget(post, this);
     postsLayout->addWidget(widget);
-    QString pId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+    QString pId =
+        post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
     m_postWidgets[pId] = widget;
 }
 
@@ -764,8 +734,8 @@ void FeedWindow::loadPosts(bool append) {
         lastPostId.clear();
         clearPosts();
     }
-    
-    QString cursorParam;
+
+    QString cursorParam; // курсор cursor
     if (append && !lastPostId.isEmpty() && !lastPostDate.isEmpty()) {
         cursorParam = QString("&cursor=%1:%2").arg(lastPostDate, lastPostId);
     }
@@ -853,9 +823,9 @@ void FeedWindow::onBackClicked() {
     resetToMainFeed();
 }
 
-void FeedWindow::onAuthorClicked(const QString &authorId) {
-    if (authorId == myActualId) {
-        loadMyProfile();
+void FeedWindow::onAuthorClicked(const QString &authorId, bool isMePost) {
+    if (isMePost) {
+        loadProfile("me");
     } else {
         loadProfile(authorId);
     }
@@ -864,13 +834,13 @@ void FeedWindow::onAuthorClicked(const QString &authorId) {
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         showCustomMessage(this, "Post created successfully", ":/sources/warn_happy.png");
-        if (isProfileMode) {
+        if (isProfileMode) { // не забыть - апдейтит ленту или профиль если все хорошо
             loadProfile(currentProfileId);
         } else {
             loadFeed(friendsFeed);
         }
     } else {
-        QByteArray response = reply->readAll();
+        QByteArray response = reply->readAll(); // кушаем и выдаём ошибку, чего на так с паблишем
         QString errorMsg = reply->errorString();
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject() && doc.object().contains("reason")) {
@@ -891,7 +861,9 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
             for (const auto &postVal : posts) {
                 QJsonObject post = postVal.toObject();
                 addPost(post);
-                lastPostId = post["id"].isString() ? post["id"].toString() : QString::number(post["id"].toInt());
+                lastPostId = post["id"].isString()
+                                 ? post["id"].toString()
+                                 : QString::number(post["id"].toInt()); // для курсора
                 lastPostDate = post["createdAt"].toString();
             }
             if (posts.size() == limit) {
@@ -1022,7 +994,9 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
                         if (userVal.isObject()) {
                             QJsonObject user = userVal.toObject();
                             QString login = user["login"].toString();
-                            QString id = user["id"].isString() ? user["id"].toString() : QString::number(user["id"].toInt());
+                            QString id = user["id"].isString()
+                                             ? user["id"].toString()
+                                             : QString::number(user["id"].toInt());
                             QListWidgetItem *item = new QListWidgetItem(login, listWidget);
                             item->setData(Qt::UserRole, id);
                         }
@@ -1053,7 +1027,7 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
 }
 
 void FeedWindow::onFollowersClicked() {
-    QString id = isProfileMode ? currentProfileId : myActualId;
+    QString id = isProfileMode ? currentProfileId : "me";
     if (id.isEmpty()) {
         showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;
@@ -1063,7 +1037,7 @@ void FeedWindow::onFollowersClicked() {
 }
 
 void FeedWindow::onFollowingClicked() {
-    QString id = isProfileMode ? currentProfileId : myActualId;
+    QString id = isProfileMode ? currentProfileId : "me";
     if (id.isEmpty()) {
         showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;

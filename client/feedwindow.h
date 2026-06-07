@@ -26,7 +26,7 @@ public:
     void loadMyProfile();
 
 public slots:
-    void onAuthorClicked(const QString &authorId);
+    void onAuthorClicked(const QString &authorId, bool isMePost);
     void onLikeDislike(const QString &postId, bool isLike);
 
 private slots:
@@ -43,7 +43,6 @@ private slots:
     void onProfileInfoFinished(QNetworkReply *reply);
     void onFollowFromProfile();
     void onUnfollowFromProfile();
-    void onMyLoginFinished(QNetworkReply *reply);
     void onFollowersClicked();
     void onFollowingClicked();
     void onEditProfileClicked();
@@ -90,7 +89,6 @@ private:
     void updatePostReaction(const QString &postId, int newLikes, int newDislikes);
     void updateProfileHeader(const QJsonObject &profile);
     void showNoPostsImage();
-    void fetchMyLogin();
     void showUserList(const QString &title, const QString &endpoint);
     void resetToMainFeed();
     void showFeedButtons();

@@ -4,6 +4,8 @@ set -e
 
 NO_BUILD=false
 if [ "$1" = "-nb" ]; then
+    cd build
+    make -j$(nproc)
     NO_BUILD=true
 fi
 
