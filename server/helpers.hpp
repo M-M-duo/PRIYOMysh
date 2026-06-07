@@ -1,13 +1,13 @@
 #pragma once
-#include <chrono>
 #include <crypt.h>
-#include <ctime>
 #include <drogon/drogon.h>
 #include <drogon/orm/Exception.h>
 #include <drogon/utils/Utilities.h>
+#include <jwt-cpp/jwt.h>
+#include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <jwt-cpp/jwt.h>
 #include <optional>
 #include <random>
 #include <regex>
@@ -24,7 +24,8 @@ inline drogon::orm::DbClientPtr getDbClient() {
             " dbname=" + std::string(std::getenv("POSTGRES_DATABASE")) +
             " user=" + std::string(std::getenv("POSTGRES_USERNAME")) +
             " password=" + std::string(std::getenv("POSTGRES_PASSWORD")),
-        1);
+        1
+    );
     return client;
 }
 
@@ -59,17 +60,23 @@ inline std::string JWT_SECRET = [] {
     return s ? s : "default_secret";
 }();
 
-inline std::string createToken(const std::string &login, int token_number, int update_token) {
+inline std::string
+createToken(const std::string &login, int token_number, int update_token) {
     auto now = std::chrono::system_clock::now();
     auto exp = now + std::chrono::hours(20);
-    auto token = jwt::create()
-                     .set_type("JWT")
-                     .set_payload_claim("login", jwt::claim(login))
-                     .set_expires_at(exp)
-                     .set_payload_claim("token_number", jwt::claim(std::to_string(token_number)))
-                     .set_payload_claim("update_token", jwt::claim(std::to_string(update_token)))
-                     .set_issuer("")
-                     .sign(jwt::algorithm::hs256{JWT_SECRET});
+    auto token =
+        jwt::create()
+            .set_type("JWT")
+            .set_payload_claim("login", jwt::claim(login))
+            .set_expires_at(exp)
+            .set_payload_claim(
+                "token_number", jwt::claim(std::to_string(token_number))
+            )
+            .set_payload_claim(
+                "update_token", jwt::claim(std::to_string(update_token))
+            )
+            .set_issuer("")
+            .sign(jwt::algorithm::hs256{JWT_SECRET});
     return token;
 }
 
@@ -83,15 +90,18 @@ struct TokenPayload {
 inline std::optional<TokenPayload> getTokenContent(const std::string &token) {
     try {
         auto decoded = jwt::decode(token);
-        auto verifier =
-            jwt::verify().allow_algorithm(jwt::algorithm::hs256{JWT_SECRET}).with_issuer("");
+        auto verifier = jwt::verify()
+                            .allow_algorithm(jwt::algorithm::hs256{JWT_SECRET})
+                            .with_issuer("");
         verifier.verify(decoded);
 
         TokenPayload payload;
         payload.login = decoded.get_payload_claim("login").as_string();
         payload.exp = decoded.get_payload_claim("exp").as_date();
-        payload.token_number = std::stoi(decoded.get_payload_claim("token_number").as_string());
-        payload.update_token = std::stoi(decoded.get_payload_claim("update_token").as_string());
+        payload.token_number =
+            std::stoi(decoded.get_payload_claim("token_number").as_string());
+        payload.update_token =
+            std::stoi(decoded.get_payload_claim("update_token").as_string());
         return payload;
     } catch (const std::exception &e) {
         LOG_ERROR << "JWT verification exception: " << e.what();
@@ -108,7 +118,9 @@ inline bool validateEmail(const std::string &email) {
     if (email.length() > 50) {
         return false;
     }
-    const std::regex pattern(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+    const std::regex pattern(
+        R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)"
+    );
     return std::regex_match(email, pattern);
 }
 
@@ -130,7 +142,8 @@ inline bool validatePasswordStrength(const std::string &pw) {
 }
 
 inline bool validatePhone(const std::string &phone) {
-    return phone.length() <= 20 && std::regex_match(phone, std::regex("^\\+[\\d]+$"));
+    return phone.length() <= 20 &&
+           std::regex_match(phone, std::regex("^\\+[\\d]+$"));
 }
 
 inline bool validateImage(const std::string &image) {
@@ -139,15 +152,19 @@ inline bool validateImage(const std::string &image) {
 
 inline std::string generateFilename(const std::string &extension = ".jpg") {
     auto now = std::chrono::system_clock::now();
-    auto timestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         now.time_since_epoch()
+    )
+                         .count();
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(100000, 999999);
-    return std::to_string(timestamp) + "_" + std::to_string(dis(gen)) + extension;
+    return std::to_string(timestamp) + "_" + std::to_string(dis(gen)) +
+           extension;
 }
 
-inline bool saveBase64(const std::string &base64Data, const std::string &filePath) {
+inline bool
+saveBase64(const std::string &base64Data, const std::string &filePath) {
     LOG_INFO << "saveBase64 started";
     std::string decoded = drogon::utils::base64Decode(base64Data);
     LOG_INFO << "decoded Base64";
@@ -177,8 +194,10 @@ inline std::string loadImageAsBase64(const std::string &filePath) {
     return drogon::utils::base64Encode(content);
 }
 
-inline void verifyToken(const HttpRequestPtr &req,
-                        std::function<void(std::optional<std::string>)> callback) {
+inline void verifyToken(
+    const HttpRequestPtr &req,
+    std::function<void(std::optional<std::string>)> callback
+) {
     auto auth = req->getHeader("Authorization");
     if (auth.empty() || auth.substr(0, 7) != "Bearer ") {
         callback(std::nullopt);
@@ -191,22 +210,24 @@ inline void verifyToken(const HttpRequestPtr &req,
         return;
     }
     auto db = getDbClient();
-    db->execSqlAsync(R"sql(SELECT token_number FROM users WHERE login = $1)sql",
-                     [payload, callback](const drogon::orm::Result &r) {
-                         if (r.empty()) {
-                             callback(std::nullopt);
-                             return;
-                         }
-                         int dbTokenNumber = r[0]["token_number"].as<int>();
-                         if (dbTokenNumber != payload->token_number) {
-                             callback(std::nullopt);
-                             return;
-                         }
-                         callback(payload->login);
-                     },
-                     [callback](const drogon::orm::DrogonDbException &e) {
-                         LOG_ERROR << e.base().what();
-                         callback(std::nullopt);
-                     },
-                     payload->login);
+    db->execSqlAsync(
+        R"sql(SELECT token_number FROM users WHERE login = $1)sql",
+        [payload, callback](const drogon::orm::Result &r) {
+            if (r.empty()) {
+                callback(std::nullopt);
+                return;
+            }
+            int dbTokenNumber = r[0]["token_number"].as<int>();
+            if (dbTokenNumber != payload->token_number) {
+                callback(std::nullopt);
+                return;
+            }
+            callback(payload->login);
+        },
+        [callback](const drogon::orm::DrogonDbException &e) {
+            LOG_ERROR << e.base().what();
+            callback(std::nullopt);
+        },
+        payload->login
+    );
 }

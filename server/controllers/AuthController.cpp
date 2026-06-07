@@ -1,6 +1,6 @@
 #include "AuthController.hpp"
-#include "helpers.hpp"
 #include <drogon/utils/Utilities.h>
+#include "helpers.hpp"
 
 using namespace drogon;
 
@@ -12,7 +12,10 @@ void AuthController::ping(const HttpRequestPtr &req, Callback &&callback) {
     callback(resp);
 }
 
-void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback) {
+void AuthController::registerUser(
+    const HttpRequestPtr &req,
+    Callback &&callback
+) {
     auto json = req->getJsonObject();
     if (!json) {
         LOG_INFO << "json in AuthController::registerUser does not exist";
@@ -91,7 +94,8 @@ void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback
          image](const drogon::orm::Result &r) {
             if (!r.empty()) {
                 Json::Value ret;
-                ret["reason"] = "User with this login, email or phone already exists";
+                ret["reason"] =
+                    "User with this login, email or phone already exists";
                 auto resp = HttpResponse::newHttpJsonResponse(ret);
                 resp->setStatusCode(k409Conflict);
                 callback(resp);
@@ -102,7 +106,8 @@ void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback
 
             db->execSqlAsync(
                 R"sql(INSERT INTO users (login, email, password, is_public, phone, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *)sql",
-                [callback, login, email, isPublic, phone, image](const drogon::orm::Result &r) {
+                [callback, login, email, isPublic, phone,
+                 image](const drogon::orm::Result &r) {
                     Json::Value profile;
                     profile["login"] = login;
                     profile["email"] = email;
@@ -128,7 +133,8 @@ void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback
                     resp->setStatusCode(k400BadRequest);
                     callback(resp);
                 },
-                login, email, hashed, isPublic, phone, image);
+                login, email, hashed, isPublic, phone, image
+            );
         },
         [callback](const drogon::orm::DrogonDbException &e) {
             LOG_ERROR << e.base().what();
@@ -138,7 +144,8 @@ void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback
             resp->setStatusCode(k400BadRequest);
             callback(resp);
         },
-        login, email, phone);
+        login, email, phone
+    );
 }
 
 void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
@@ -169,7 +176,8 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
         [callback, login, password](const drogon::orm::Result &r) {
             if (r.empty()) {
                 Json::Value ret;
-                ret["reason"] = "User with this login and password was not found";
+                ret["reason"] =
+                    "User with this login and password was not found";
                 auto resp = HttpResponse::newHttpJsonResponse(ret);
                 resp->setStatusCode(k401Unauthorized);
                 callback(resp);
@@ -179,7 +187,8 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
             std::string hashed = row["password"].as<std::string>();
             if (!checkPassword(password, hashed)) {
                 Json::Value ret;
-                ret["reason"] = "User with this login and password was not found";
+                ret["reason"] =
+                    "User with this login and password was not found";
                 auto resp = HttpResponse::newHttpJsonResponse(ret);
                 resp->setStatusCode(k401Unauthorized);
                 callback(resp);
@@ -194,7 +203,8 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
                 R"sql(UPDATE users SET update_token = update_token + 1 WHERE login = $1 RETURNING update_token)sql",
                 [callback, login, token_number](const drogon::orm::Result &r) {
                     int new_update_token = r[0]["update_token"].as<int>();
-                    std::string jwt = createToken(login, token_number, new_update_token);
+                    std::string jwt =
+                        createToken(login, token_number, new_update_token);
                     Json::Value ret;
                     ret["token"] = jwt;
                     auto resp = HttpResponse::newHttpJsonResponse(ret);
@@ -204,12 +214,14 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
                 [callback](const drogon::orm::DrogonDbException &e) {
                     LOG_ERROR << e.base().what();
                     Json::Value ret;
-                    ret["reason"] = "User with this login and password was not found";
+                    ret["reason"] =
+                        "User with this login and password was not found";
                     auto resp = HttpResponse::newHttpJsonResponse(ret);
                     resp->setStatusCode(k401Unauthorized);
                     callback(resp);
                 },
-                login);
+                login
+            );
         },
         [callback](const drogon::orm::DrogonDbException &e) {
             LOG_ERROR << e.base().what();
@@ -219,5 +231,6 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
             resp->setStatusCode(k401Unauthorized);
             callback(resp);
         },
-        login);
+        login
+    );
 }
