@@ -94,6 +94,20 @@ void setupDatabase() {
             LOG_ERROR << e.base().what();
         }
     );
+
+    db->execSqlAsync(
+        R"sql(CREATE TABLE IF NOT EXISTS likes (
+            id SERIAL PRIMARY KEY,
+            id_post INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+            author VARCHAR(30) NOT NULL,
+            is_like BOOLEAN NOT NULL,
+            UNIQUE(id_post, author)
+        ))sql",
+        [](const drogon::orm::Result &) { LOG_INFO << "likes table ready"; },
+        [](const drogon::orm::DrogonDbException &e) {
+            LOG_ERROR << e.base().what();
+        }
+    );
 }
 
 int main() {
