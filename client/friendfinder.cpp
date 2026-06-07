@@ -1,4 +1,3 @@
-// friendfinder.cpp
 #include "friendfinder.h"
 #include "feedwindow.h"
 #include <QDebug>
