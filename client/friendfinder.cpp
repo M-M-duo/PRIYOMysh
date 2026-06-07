@@ -98,7 +98,9 @@ void FriendFinder::searchUser() {
         return;
     }
     clearResult();
-
+    qDebug() << "Target URL:" << url.toString();
+    qDebug() << "Authorization Token:" << (authToken.isEmpty() ? "EMPTY" : "Provided (length: " + QString::number(authToken.length()) + ")");
+    qDebug() << "Searching for login:" << login;
     QUrl url(QString("%1/api/friends/search/%2").arg(API_BASE_URL, login));
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
