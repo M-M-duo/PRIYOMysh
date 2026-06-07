@@ -1,11 +1,9 @@
 #include "profiledialog.h"
-#include <QVBoxLayout>
-#include <QLabel>
 #include <QFormLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
-ProfileDialog::ProfileDialog(const QJsonObject &userData, QWidget *parent)
-    : QDialog(parent)
-{
+ProfileDialog::ProfileDialog(const QJsonObject &userData, QWidget *parent) : QDialog(parent) {
     setupUI(userData);
 }
 

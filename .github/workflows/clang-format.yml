@@ -1,0 +1,19 @@
+name: clang-format Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  formatting-check:
+    name: Check code style
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install clang-format-15
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format-15
+    - name: Run clang-format
+      run: |
+        find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path './build/*' -not -path './third_party/*' -print0 | xargs -0 clang-format-15 --dry-run --Werror
