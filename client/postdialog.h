@@ -2,10 +2,10 @@
 #define POSTDIALOG_H
 
 #include <QDialog>
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
 #include <QTextEdit>
+#include <QLineEdit>
+#include <QLabel>
+#include <QPushButton>
 #include <QVector>
 
 class PostDialog : public QDialog {
@@ -21,16 +21,14 @@ protected:
 
 private slots:
     void chooseImage(int index);
-    void onDescriptionChanged();
 
 private:
     QTextEdit *descriptionEdit;
     QLineEdit *tagsEdit;
-    QVector<QLabel *> imageSlots;
+    QVector<QLabel*> imageSlots;
     QStringList imagesBase64;
     QPushButton *publishButton;
     QPushButton *cancelButton;
-    QString lastValidDescription;
 
     void setupUI();
     QString cropAndToBase64(const QString &filePath);

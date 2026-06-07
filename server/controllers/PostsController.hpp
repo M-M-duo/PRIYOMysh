@@ -11,6 +11,8 @@ public:
         ADD_METHOD_TO(PostsController::userFeed, "/api/posts/feed/{login}", drogon::Get);
         ADD_METHOD_TO(PostsController::newsFeed, "/api/posts/feed", drogon::Get);
         ADD_METHOD_TO(PostsController::newsFriendsFeed, "/api/posts/feed/friends", drogon::Get);
+        ADD_METHOD_TO(PostsController::likePost, "/api/posts/{postId}/like", drogon::Post);
+        ADD_METHOD_TO(PostsController::dislikePost, "/api/posts/{postId}/dislike", drogon::Post);
     METHOD_LIST_END
 
     void newPost(const drogon::HttpRequestPtr& req,
@@ -27,4 +29,10 @@ public:
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback);
     void newsFriendsFeed(const drogon::HttpRequestPtr& req,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+    void likePost(const drogon::HttpRequestPtr& req,
+                  std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                  std::string postId);
+    void dislikePost(const drogon::HttpRequestPtr& req,
+                     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                     std::string postId);
 };

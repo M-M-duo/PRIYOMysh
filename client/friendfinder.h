@@ -1,24 +1,18 @@
-// friendfinder.h
 #ifndef FRIENDFINDER_H
 #define FRIENDFINDER_H
 
 #include <QDialog>
-#include <QLabel>
-#include <QLineEdit>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
-
-class FeedWindow;
 
 class FriendFinder : public QDialog {
     Q_OBJECT
 public:
-    explicit FriendFinder(const QString &token, FeedWindow *parent = nullptr);
+    explicit FriendFinder(const QString &token, QWidget *parent = nullptr);
     ~FriendFinder();
-
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void searchUser();
@@ -27,13 +21,12 @@ private slots:
     void onSearchFinished(QNetworkReply *reply);
     void onFollowFinished(QNetworkReply *reply);
     void onUnfollowFinished(QNetworkReply *reply);
-    void onViewProfile();
+    void onViewPosts();
 
 private:
     QNetworkAccessManager *networkManager;
     QString authToken;
-    FeedWindow *parentFeedWindow;
-    QString currentSearchId;
+    QString currentSearchLogin;
     bool isFollowing;
     bool isMutual;
 
@@ -41,10 +34,12 @@ private:
     QPushButton *searchButton;
     QWidget *resultWidget;
     QLabel *resultLabel;
+    QPushButton *viewPostsButton;
     QPushButton *actionButton;
     QLabel *statusLabel;
 
     void setupUI();
+    void showError(const QString &message);
     void clearResult();
 };
 
