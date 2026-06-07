@@ -215,19 +215,33 @@ void EditProfileDialog::onPasswordUpdated() {
         showMessage("Please fill both fields", ":/sources/warning_01.png");
         return;
     }
+    
     QUrl url(API_BASE_URL + "/api/me/updatePassword");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", ("Bearer " + authToken).toUtf8());
+    
     QJsonObject json;
     json["currentPassword"] = currentPwd;
     json["newPassword"] = newPwd;
     QByteArray data = QJsonDocument(json).toJson();
+
+    qDebug() << "=== Password Update Request ===";
+    qDebug() << "URL:" << url.toString();
+    qDebug() << "Payload:" << QString::fromUtf8(data);
+
     QNetworkAccessManager manager;
     QNetworkReply *reply = manager.post(request, data);
+    
     QEventLoop loop;
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
+
+    QByteArray response = reply->readAll();
+    qDebug() << "=== Password Update Response ===";
+    qDebug() << "Status Code:" << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    qDebug() << "Body:" << QString::fromUtf8(response);
+
     if (reply->error() == QNetworkReply::NoError) {
         showMessage("Password updated successfully", ":/sources/warn_happy.png");
         passwordWidget->setVisible(false);
@@ -235,7 +249,6 @@ void EditProfileDialog::onPasswordUpdated() {
         currentPasswordEdit->clear();
         newPasswordEdit->clear();
     } else {
-        QByteArray response = reply->readAll();
         QString errorMsg = reply->errorString();
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject() && doc.object().contains("reason")) {
