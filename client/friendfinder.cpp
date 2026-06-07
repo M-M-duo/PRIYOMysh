@@ -121,7 +121,8 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
             if (isMe) {
                 currentSearchId = "me";
             } else {
-                currentSearchId = obj["id"].isString() ? obj["id"].toString() : QString::number(obj["id"].toInt());
+                currentSearchId = obj["id"].isString() ? obj["id"].toString()
+                                                       : QString::number(obj["id"].toInt());
             }
 
             bool isFollowed = obj["isFollowed"].toBool();
