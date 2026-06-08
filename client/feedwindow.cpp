@@ -48,7 +48,7 @@ static QString wrapText(const QString &text, int maxLineLength) {
     QStringList words = text.split(' ');
     for (const QString &word : words) {
         if (word.length() > maxLineLength) {
-            if (!currentLine.isEmpty()) { // обрабокта супер-длинного слова
+            if (!currentLine.isEmpty()) {
                 result += currentLine + "\n";
                 currentLine.clear();
             }
@@ -258,7 +258,7 @@ public:
             mainLayout->addWidget(dateLabel);
         }
 
-        QFrame *line = new QFrame(this); // нижняя разделительная линия
+        QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
         line->setFixedWidth(440);
@@ -354,12 +354,6 @@ FeedWindow::FeedWindow(const QString &token, QWidget *parent)
 FeedWindow::~FeedWindow() {}
 
 void FeedWindow::setupUI() {
-    setWindowTitle("PRIYOMYSH");
-    setFixedSize(450, 840);
-    setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
-    setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
-    setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
-
     QWidget *central = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(central);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -430,7 +424,7 @@ void FeedWindow::setupUI() {
 
     profileHeader->setVisible(false);
     mainLayout->addWidget(profileHeader);
-    // зона отрисовки постов
+
     scrollArea = new QScrollArea(this);
     scrollWidget = new QWidget();
     postsLayout = new QVBoxLayout(scrollWidget);
@@ -462,6 +456,17 @@ void FeedWindow::setupUI() {
     bottomBar->addWidget(backButton);
     connect(backButton, &QPushButton::clicked, this, &FeedWindow::onBackClicked);
 
+    exitButton = new QPushButton("Exit", this);
+    exitButton->setFixedSize(100, 48);
+    exitButton->setStyleSheet(
+        "QPushButton { background-color: #007bff; border: none; border-radius: 18px; font-size: "
+        "14px; font-weight: 500; color: white; }"
+        "QPushButton:hover { background-color: #0056b3; }"
+        "QPushButton:pressed { background-color: #004085; }");
+    exitButton->setVisible(false);
+    bottomBar->addWidget(exitButton);
+    connect(exitButton, &QPushButton::clicked, this, &FeedWindow::logoutRequested);
+
     findFriendsButton = new QPushButton("⌕", this);
     createPostButton = new QPushButton("+", this);
     profileButton = new QPushButton("🐭", this);
@@ -473,7 +478,7 @@ void FeedWindow::setupUI() {
     profileButton->setFixedSize(50, 48);
     sharedButton->setFixedSize(100, 44);
     followButton->setFixedSize(100, 44);
-    // вёрстка кнопок внизу окна
+
     bottomBar->addSpacing(10);
     bottomBar->addWidget(findFriendsButton);
     bottomBar->addSpacing(10);
@@ -532,7 +537,7 @@ void FeedWindow::setupUI() {
             color: white;
         }
     )";
-    // привязка downbar кнопок к стилям и функциям
+
     findFriendsButton->setStyleSheet(transparentButtonStyle(40));
     createPostButton->setStyleSheet(transparentButtonStyle(30));
     profileButton->setStyleSheet(transparentButtonStyle(25));
@@ -560,6 +565,7 @@ void FeedWindow::showFeedButtons() {
     followButton->setVisible(true);
     profileButton->setVisible(true);
     backButton->setVisible(false);
+    exitButton->setVisible(false);
     if (followProfileButton)
         followProfileButton->setVisible(false);
 }
@@ -571,6 +577,7 @@ void FeedWindow::showProfileButtons() {
     followButton->setVisible(false);
     profileButton->setVisible(false);
     backButton->setVisible(true);
+    exitButton->setVisible(currentProfileId == "me");
 }
 
 void FeedWindow::resetToMainFeed() {
@@ -596,7 +603,6 @@ void FeedWindow::loadProfile(const QString &id) {
     currentProfileId = id;
     isProfileMode = true;
     profileHeader->setVisible(false);
-    backButton->setVisible(true);
     showProfileButtons();
 
     QString endpoint = QString("%1/api/profiles/%2").arg(API_BASE_URL, id);
@@ -661,7 +667,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
             QPixmap scaled = pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             QPixmap rounded(120, 120);
             rounded.fill(Qt::transparent);
-            QPainter painter(&rounded); // убрать, картинки уже изначально округляются
+            QPainter painter(&rounded);
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setBrush(QBrush(scaled));
             painter.setPen(Qt::NoPen);
@@ -670,7 +676,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
             avatarLabel->setStyleSheet("border: none;");
         }
     }
-    bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false; // fix
+    bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
         followProfileButton->setText("Edit profile");
@@ -743,7 +749,7 @@ void FeedWindow::loadPosts(bool append) {
         clearPosts();
     }
 
-    QString cursorParam; // курсор cursor
+    QString cursorParam;
     if (append && !lastPostId.isEmpty() && !lastPostDate.isEmpty()) {
         cursorParam = QString("&cursor=%1:%2").arg(lastPostDate, lastPostId);
     }
@@ -842,13 +848,13 @@ void FeedWindow::onAuthorClicked(const QString &authorId, bool isMePost) {
 void FeedWindow::onPostReplyFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         showCustomMessage(this, "Post created successfully", ":/sources/warn_happy.png");
-        if (isProfileMode) { // не забыть - апдейтит ленту или профиль если все хорошо
+        if (isProfileMode) {
             loadProfile(currentProfileId);
         } else {
             loadFeed(friendsFeed);
         }
     } else {
-        QByteArray response = reply->readAll(); // кушаем и выдаём ошибку, чего на так с паблишем
+        QByteArray response = reply->readAll();
         QString errorMsg = reply->errorString();
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isObject() && doc.object().contains("reason")) {
@@ -869,9 +875,8 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
             for (const auto &postVal : posts) {
                 QJsonObject post = postVal.toObject();
                 addPost(post);
-                lastPostId = post["id"].isString()
-                                 ? post["id"].toString()
-                                 : QString::number(post["id"].toInt()); // для курсора
+                lastPostId = post["id"].isString() ? post["id"].toString()
+                                                   : QString::number(post["id"].toInt());
                 lastPostDate = post["createdAt"].toString();
             }
             if (posts.size() == limit) {
@@ -1077,6 +1082,10 @@ void FeedWindow::onEditProfileClicked() {
 
                 EditProfileDialog dialog(login, email, phone, isPrivate, avatarBase64, authToken,
                                          this);
+
+                connect(&dialog, &EditProfileDialog::passwordChanged, this,
+                        &FeedWindow::logoutRequested);
+
                 connect(
                     &dialog, &EditProfileDialog::profileUpdated,
                     [this](const QString &login, const QString &email, const QString &phone,

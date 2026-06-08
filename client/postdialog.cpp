@@ -20,6 +20,9 @@ PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
 void PostDialog::setupUI() {
     setWindowTitle("Create Post");
     setFixedWidth(350);
+
+    move(50, 180);
+
     QVBoxLayout *layout = new QVBoxLayout(this);
 
     layout->addWidget(new QLabel("Description:"));

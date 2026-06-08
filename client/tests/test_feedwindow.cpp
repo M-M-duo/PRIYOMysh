@@ -4,9 +4,12 @@
 
 class TestFeedWindow : public QObject {
     Q_OBJECT
+
 private slots:
     void testFeedLayoutStructure() {
         FeedWindow feedWin("mock_token_xyz");
+
+        feedWin.resize(400, 700);
 
         QScrollArea *scrollArea = feedWin.findChild<QScrollArea *>();
         QVERIFY2(scrollArea != nullptr, "Scroll Area for layout feed posts was not found.");

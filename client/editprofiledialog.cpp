@@ -51,6 +51,8 @@ EditProfileDialog::~EditProfileDialog() {}
 
 void EditProfileDialog::setupUI() {
     setWindowTitle("Edit Profile");
+    setFixedSize(360, 480);
+    this->move(45, 180);
     setModal(true);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
