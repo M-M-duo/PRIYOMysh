@@ -2,11 +2,11 @@ name: Code Quality Check
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   linting:
-    name: clang-format
+    name: Formatting and Static Analysis
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
@@ -47,4 +47,5 @@ jobs:
     - name: Run Tests
       run: |
         cd client/build
+        export QT_QPA_PLATFORM=offscreen
         ./ping_monitor_tests
