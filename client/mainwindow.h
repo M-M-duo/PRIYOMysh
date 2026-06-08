@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QPointer>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -19,7 +20,7 @@ private slots:
 
 private:
     QNetworkAccessManager *networkManager;
-    QDialog *currentDialog;
+    QPointer<QDialog> currentDialog;
     QString pendingMode;
     QString pendingLogin;
     QString pendingPassword;

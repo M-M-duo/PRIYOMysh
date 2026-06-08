@@ -127,6 +127,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     registerBtn->setStyleSheet(buttonStyle);
 
     connect(loginBtn, &QPushButton::clicked, [this]() {
+        if (currentDialog) {
+            currentDialog->deleteLater();
+        }
+
         AuthDialog *dialog = new AuthDialog("login", this);
         currentDialog = dialog;
         connect(dialog, &AuthDialog::loginClicked, this, &MainWindow::onLoginClicked);
@@ -134,6 +138,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     });
 
     connect(registerBtn, &QPushButton::clicked, [this]() {
+        if (currentDialog) {
+            currentDialog->deleteLater();
+        }
+
         AuthDialog *dialog = new AuthDialog("register", this);
         currentDialog = dialog;
         connect(dialog, &AuthDialog::registerClicked, this, &MainWindow::onRegisterClicked);
@@ -221,6 +229,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
                 QString token = obj["token"].toString();
                 FeedWindow *feed = new FeedWindow(token);
                 feed->show();
+                
                 if (currentDialog) {
                     currentDialog->accept();
                     currentDialog->deleteLater();
@@ -244,6 +253,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             errorMsg = doc.object()["reason"].toString();
         }
         qDebug().noquote() << "===server error=> " << errorMsg;
+        
         if (currentDialog) {
             showCustomError(currentDialog, errorMsg);
         } else {

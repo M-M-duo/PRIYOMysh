@@ -2,11 +2,11 @@ name: Code Quality Check
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   linting:
-    name: Formatting and Static Analysis
+    name: clang-format
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
@@ -19,3 +19,32 @@ jobs:
     - name: Check Code Style (clang-format)
       run: |
         find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path './build/*' -not -path './third_party/*' -print0 | xargs -0 clang-format-15 --dry-run --Werror
+
+  testing:
+    name: Build and Run Tests
+    needs: linting
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ qt6-base-dev libqt6gui6 libqt6widgets6 qt6-base-private-dev
+
+    - name: Configure CMake
+      run: |
+        cd client
+        mkdir -p build
+        cd build
+        cmake ..
+
+    - name: Build Project
+      run: |
+        cd client/build
+        cmake --build . --parallel 2
+
+    - name: Run Tests
+      run: |
+        cd client/build
+        ./ping_monitor_tests
