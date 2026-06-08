@@ -32,16 +32,22 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent) : QDialog(parent), 
 void AuthDialog::setupUI() {
     setWindowTitle("PRIYOMYSH");
     if (mode == "login") {
-        setFixedSize(220, 200);
+        setFixedSize(360, 200);
     } else {
-        setFixedSize(220, 480);
+        setFixedSize(360, 480);
     }
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
-
+    
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setAlignment(Qt::AlignCenter);
+    if (mode == "login") {
+        this->move(45, 360);
+    } else {
+        this->move(45, 180);
+    }
+    
 
     if (mode == "register") {
         QHBoxLayout *avatarLayout = new QHBoxLayout();
