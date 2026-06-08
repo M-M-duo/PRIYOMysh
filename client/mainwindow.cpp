@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     topWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QVBoxLayout *topLayout = new QVBoxLayout(topWidget);
     topLayout->setAlignment(Qt::AlignCenter);
-    
+
     QLabel *logoLabel = new QLabel(this);
     logoLabel->setFixedSize(360, 360);
     logoLabel->setScaledContents(true);
@@ -229,7 +229,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
                 QString token = obj["token"].toString();
                 FeedWindow *feed = new FeedWindow(token);
                 feed->show();
-                
+
                 if (currentDialog) {
                     currentDialog->accept();
                     currentDialog->deleteLater();
@@ -253,7 +253,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             errorMsg = doc.object()["reason"].toString();
         }
         qDebug().noquote() << "===server error=> " << errorMsg;
-        
+
         if (currentDialog) {
             showCustomError(currentDialog, errorMsg);
         } else {

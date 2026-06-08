@@ -1,8 +1,8 @@
-#include <QtTest/QtTest>
-#include <QLineEdit>
-#include <QLabel>
-#include <QPushButton>
 #include "../friendfinder.h"
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QtTest/QtTest>
 
 class TestFriendFinder : public QObject {
     Q_OBJECT
@@ -10,13 +10,13 @@ private slots:
     void testUIStateWhenUserFound() {
         FriendFinder finder("mock_token");
 
-        QList<QLabel*> labels = finder.findChildren<QLabel*>();
+        QList<QLabel *> labels = finder.findChildren<QLabel *>();
         QVERIFY(labels.size() >= 2);
 
-        QLabel* resultLabel = labels.at(0);
-        QLabel* statusLabel = labels.at(1);
-        QPushButton* actionButton = finder.findChild<QPushButton*>();
-        QWidget* resultWidget = finder.findChild<QWidget*>();
+        QLabel *resultLabel = labels.at(0);
+        QLabel *statusLabel = labels.at(1);
+        QPushButton *actionButton = finder.findChild<QPushButton *>();
+        QWidget *resultWidget = finder.findChild<QWidget *>();
 
         QVERIFY(resultLabel != nullptr);
         QVERIFY(statusLabel != nullptr);
@@ -30,7 +30,7 @@ private slots:
         QCOMPARE(resultLabel->text(), QString("test_friend_login"));
         QCOMPARE(statusLabel->text(), QString("Not followed"));
         QCOMPARE(actionButton->text(), QString("Follow"));
-        
+
         QVERIFY(resultWidget->isVisibleTo(&finder));
     }
 };

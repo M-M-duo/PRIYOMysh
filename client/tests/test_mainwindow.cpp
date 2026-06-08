@@ -1,21 +1,23 @@
-#include <QtTest/QtTest>
-#include <QPushButton>
-#include "../mainwindow.h"
 #include "../authdialog.h"
+#include "../mainwindow.h"
+#include <QPushButton>
+#include <QtTest/QtTest>
 
 class TestMainWindow : public QObject {
     Q_OBJECT
 private slots:
     void testButtonsExist() {
         MainWindow mw;
-        QList<QPushButton*> buttons = mw.findChildren<QPushButton*>();
+        QList<QPushButton *> buttons = mw.findChildren<QPushButton *>();
         QVERIFY(buttons.size() >= 2);
-        
+
         bool hasLogin = false;
         bool hasRegister = false;
-        for (auto* btn : buttons) {
-            if (btn->text() == "Login") hasLogin = true;
-            if (btn->text() == "Register") hasRegister = true;
+        for (auto *btn : buttons) {
+            if (btn->text() == "Login")
+                hasLogin = true;
+            if (btn->text() == "Register")
+                hasRegister = true;
         }
         QVERIFY(hasLogin);
         QVERIFY(hasRegister);
@@ -25,15 +27,18 @@ private slots:
         MainWindow mw;
         mw.show();
 
-        QPushButton* loginBtn = nullptr;
-        for (auto* btn : mw.findChildren<QPushButton*>()) {
-            if (btn->text() == "Login") { loginBtn = btn; break; }
+        QPushButton *loginBtn = nullptr;
+        for (auto *btn : mw.findChildren<QPushButton *>()) {
+            if (btn->text() == "Login") {
+                loginBtn = btn;
+                break;
+            }
         }
         QVERIFY(loginBtn != nullptr);
-        
+
         QTest::mouseClick(loginBtn, Qt::LeftButton);
-        
-        QDialog* dialog = mw.findChild<AuthDialog*>();
+
+        QDialog *dialog = mw.findChild<AuthDialog *>();
         QVERIFY(dialog != nullptr);
         dialog->close();
     }

@@ -100,9 +100,12 @@ void FriendFinder::searchUser() {
     clearResult();
 
     QUrl url(QString("%1/api/friends/search/%2").arg(API_BASE_URL, login));
-    
+
     qDebug() << "Target URL:" << url.toString();
-    qDebug() << "Authorization Token:" << (authToken.isEmpty() ? "EMPTY" : "Provided (length: " + QString::number(authToken.length()) + ")");
+    qDebug() << "Authorization Token:"
+             << (authToken.isEmpty()
+                     ? "EMPTY"
+                     : "Provided (length: " + QString::number(authToken.length()) + ")");
     qDebug() << "Searching for login:" << login;
 
     QNetworkRequest request(url);

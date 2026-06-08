@@ -1,7 +1,7 @@
-#include <QtTest/QtTest>
+#include "../postdialog.h"
 #include <QLineEdit>
 #include <QTextEdit>
-#include "../postdialog.h"
+#include <QtTest/QtTest>
 
 class TestPostDialog : public QObject {
     Q_OBJECT
@@ -14,12 +14,12 @@ private slots:
 
     void testTagParsing() {
         PostDialog dialog;
-        QLineEdit *tagsEdit = dialog.findChild<QLineEdit*>();
+        QLineEdit *tagsEdit = dialog.findChild<QLineEdit *>();
         QVERIFY(tagsEdit != nullptr);
-        
+
         tagsEdit->setText(" #cpp #qt6 #tests ");
         QStringList tags = dialog.getTags();
-        
+
         QCOMPARE(tags.size(), 3);
         QCOMPARE(tags.at(0), QString("#cpp"));
         QCOMPARE(tags.at(2), QString("#tests"));
