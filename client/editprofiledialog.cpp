@@ -224,7 +224,7 @@ void EditProfileDialog::onPasswordUpdated() {
     request.setRawHeader("Authorization", ("Bearer " + authToken).toUtf8());
 
     QJsonObject json;
-    json["currentPassword"] = currentPwd;
+    json["oldPassword"] = currentPwd;
     json["newPassword"] = newPwd;
     QByteArray data = QJsonDocument(json).toJson();
 
