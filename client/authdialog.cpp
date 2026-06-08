@@ -39,7 +39,7 @@ void AuthDialog::setupUI() {
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
-    
+
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setAlignment(Qt::AlignCenter);
     if (mode == "login") {
@@ -47,7 +47,6 @@ void AuthDialog::setupUI() {
     } else {
         this->move(45, 180);
     }
-    
 
     if (mode == "register") {
         QHBoxLayout *avatarLayout = new QHBoxLayout();
