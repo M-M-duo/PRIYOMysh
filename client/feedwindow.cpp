@@ -620,7 +620,15 @@ void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject profile = doc.object();
             currentProfileLogin = profile["login"].toString();
+
             updateProfileHeader(profile);
+
+            if (profile.contains("id")) {
+                currentProfileId = profile["id"].isString()
+                                       ? profile["id"].toString()
+                                       : QString::number(profile["id"].toInt());
+            }
+
             profileHeader->setVisible(true);
             bool allowedToSee = profile["allowedToSee"].toBool();
             if (!allowedToSee) {
@@ -1027,22 +1035,22 @@ void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
 }
 
 void FeedWindow::onFollowersClicked() {
-    QString id = isProfileMode ? currentProfileId : "me";
-    if (id.isEmpty()) {
+    if (currentProfileId.isEmpty() || currentProfileId == "me") {
         showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;
     }
-    QString endpoint = QString("/api/friends/%1/followers").arg(id);
+
+    QString endpoint = QString("/api/friends/%1/followers").arg(currentProfileId);
     showUserList("Followers", endpoint);
 }
 
 void FeedWindow::onFollowingClicked() {
-    QString id = isProfileMode ? currentProfileId : "me";
-    if (id.isEmpty()) {
+    if (currentProfileId.isEmpty() || currentProfileId == "me") {
         showCustomMessage(this, "Cannot determine user id", ":/sources/warning_01.png");
         return;
     }
-    QString endpoint = QString("/api/friends/%1/following").arg(id);
+
+    QString endpoint = QString("/api/friends/%1/following").arg(currentProfileId);
     showUserList("Following", endpoint);
 }
 
