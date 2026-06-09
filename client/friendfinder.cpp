@@ -136,7 +136,7 @@ void FriendFinder::searchUser() {
 
 //             bool isFollowed = obj["isFollowed"].toBool();
 //             isFollowing = isFollowed;
-
+                
 //             resultLabel->setText(login);
 //             if (isMe) {
 //                 statusLabel->setText("it is you");
@@ -170,22 +170,28 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
             QString avatarBase64 = obj.contains("avatar") ? obj["avatar"].toString() : "";
             bool isMe = obj.contains("isMe") ? obj["isMe"].toBool() : false;
             bool isFollowed = obj.contains("isFollowed") ? obj["isFollowed"].toBool() : false;
-            QString userId = obj["id"].isVariant() ? obj["id"].toVariant().toString() : "";
+
+            QString userId;
+            if (obj["id"].isString()) {
+                userId = obj["id"].toString();
+            } else if (obj["id"].isDouble()) {
+                userId = QString::number(static_cast<long long>(obj["id"].toDouble()));
+            }
 
             qDeleteAll(resultWidget->findChildren<QWidget *>());
-
+            
             QHBoxLayout *layout = new QHBoxLayout(resultWidget);
             layout->setContentsMargins(10, 8, 10, 8);
             layout->setSpacing(15);
 
             QLabel *avatarLabel = new QLabel();
             avatarLabel->setFixedSize(48, 48);
+            
             QPixmap pixmap;
             if (!avatarBase64.isEmpty())
                 pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
             if (pixmap.isNull())
                 pixmap.load(":/sources/default_ava.png");
-
             if (!pixmap.isNull()) {
                 QPixmap scaled =
                     pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
