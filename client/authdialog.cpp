@@ -228,11 +228,15 @@ QString AuthDialog::cropAndToBase64(const QString &filePath) {
 }
 
 void AuthDialog::onButtonClicked() {
+    QDialogButtonBox *buttonBox = findChild<QDialogButtonBox *>();
+    if (buttonBox) {
+        buttonBox->setEnabled(false);
+    }
     if (mode == "login") {
-        emit loginClicked(loginEdit->text(), passwordEdit->text());
+        emit loginClicked(getLogin(), getPassword());
     } else {
-        emit registerClicked(loginEdit->text(), passwordEdit->text(), emailEdit->text(),
-                             phoneEdit->text(), privateCheckBox->isChecked(), avatarBase64);
+        emit registerClicked(getLogin(), getPassword(), getEmail(), getPhone(), isPrivate(),
+                             getAvatarBase64());
     }
 }
 
