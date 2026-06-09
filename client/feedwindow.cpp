@@ -117,7 +117,7 @@ public:
         }
 
         QLabel *nameLabel = new QLabel(username, this);
-        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #c5c5c5;");
+        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #333;");
 
         layout->addWidget(avatarLabel);
         layout->addWidget(nameLabel);
