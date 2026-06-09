@@ -51,7 +51,7 @@ EditProfileDialog::~EditProfileDialog() {}
 
 void EditProfileDialog::setupUI() {
     setWindowTitle("Edit Profile");
-    setFixedSize(360, 480);
+    setFixedSize(360, 560);
     this->move(45, 180);
     setModal(true);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
@@ -127,18 +127,16 @@ void EditProfileDialog::setupUI() {
                                    "border-radius: 10px; padding: 8px;");
     pwdLayout->addWidget(newPasswordEdit);
 
-    QHBoxLayout *pwdButtonLayout = new QHBoxLayout();
-    updatePasswordButton = new QPushButton("Update", this);
-    cancelPasswordButton = new QPushButton("Cancel", this);
+    QDialogButtonBox *pwdButtonBox = new QDialogButtonBox(this);
+    updatePasswordButton = pwdButtonBox->addButton("Update", QDialogButtonBox::AcceptRole);
+    cancelPasswordButton = pwdButtonBox->addButton("Cancel", QDialogButtonBox::RejectRole);
 
-    updatePasswordButton->setFixedSize(100, 40);
+    updatePasswordButton->setFixedSize(80, 32);
     updatePasswordButton->setStyleSheet(btnStyle);
-    cancelPasswordButton->setFixedSize(100, 40);
+    cancelPasswordButton->setFixedSize(80, 32);
     cancelPasswordButton->setStyleSheet(btnStyle);
 
-    pwdButtonLayout->addWidget(updatePasswordButton);
-    pwdButtonLayout->addWidget(cancelPasswordButton);
-    pwdLayout->addLayout(pwdButtonLayout);
+    pwdLayout->addWidget(pwdButtonBox, 0, Qt::AlignCenter);
     layout->addWidget(passwordWidget);
 
     connect(updatePasswordButton, &QPushButton::clicked, this,
@@ -187,9 +185,10 @@ void EditProfileDialog::chooseAvatar() {
     QImage scaled = cropped.scaled(128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     QPixmap rounded(128, 128);
     rounded.fill(Qt::transparent);
+    QPixmap fromImg = QPixmap::fromImage(scaled);
     QPainter painter(&rounded);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QBrush(QPixmap::fromImage(scaled)));
+    painter.setBrush(QBrush(fromImg));
     painter.setPen(Qt::NoPen);
     painter.drawRoundedRect(0, 0, 128, 128, 64, 64);
     avatarLabel->setPixmap(rounded);
@@ -271,10 +270,9 @@ void EditProfileDialog::onPasswordUpdated() {
 
     if (reply->error() == QNetworkReply::NoError) {
         showMessage("Password updated successfully", ":/sources/warn_happy.png");
-        passwordWidget->setVisible(false);
-        changePasswordButton->setVisible(true);
-        currentPasswordEdit->clear();
-        newPasswordEdit->clear();
+        
+        emit passwordChanged();
+        accept();
     } else {
         QString errorMsg = reply->errorString();
         QJsonDocument doc = QJsonDocument::fromJson(response);
