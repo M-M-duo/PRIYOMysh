@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QVBoxLayout>
@@ -32,9 +33,9 @@ AuthDialog::AuthDialog(const QString &mode, QWidget *parent) : QDialog(parent), 
 void AuthDialog::setupUI() {
     setWindowTitle("PRIYOMYSH");
     if (mode == "login") {
-        setFixedSize(220, 200);
+        setFixedSize(360, 200);
     } else {
-        setFixedSize(220, 480);
+        setFixedSize(360, 480);
     }
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
@@ -42,18 +43,42 @@ void AuthDialog::setupUI() {
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setAlignment(Qt::AlignCenter);
+    if (mode == "login") {
+        this->move(45, 360);
+    } else {
+        this->move(45, 180);
+    }
 
     if (mode == "register") {
         QHBoxLayout *avatarLayout = new QHBoxLayout();
         avatarLayout->addStretch();
         avatarLabel = new QLabel(this);
         avatarLabel->setFixedSize(64, 64);
-        avatarLabel->setStyleSheet(
-            "border: 1px solid #ccc; border-radius: 32px; background-color: #e0e0e0;");
         avatarLabel->setAlignment(Qt::AlignCenter);
-        avatarLabel->setText("🖼️");
         avatarLabel->setCursor(Qt::PointingHandCursor);
         avatarLabel->installEventFilter(this);
+
+        QPixmap defaultPix(":/sources/default_ava.png");
+        if (!defaultPix.isNull()) {
+            QPixmap scaled =
+                defaultPix.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap rounded(64, 64);
+            rounded.fill(Qt::transparent);
+
+            QPainter painter(&rounded);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(QBrush(scaled));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
+
+            avatarLabel->setPixmap(rounded);
+            avatarLabel->setStyleSheet("border: none;");
+        } else {
+            avatarLabel->setText("🖼️");
+            avatarLabel->setStyleSheet(
+                "border: 1px solid #ccc; border-radius: 32px; background-color: #e0e0e0;");
+        }
+
         avatarLayout->addWidget(avatarLabel);
         avatarLayout->addStretch();
         layout->addLayout(avatarLayout);
@@ -113,17 +138,18 @@ void AuthDialog::setupUI() {
 
     QPushButton *okButton = buttonBox->button(QDialogButtonBox::Ok);
     QPushButton *cancelButton = buttonBox->button(QDialogButtonBox::Cancel);
+
     if (okButton) {
-        okButton->setFixedSize(66, 33);
+        okButton->setFixedSize(100, 40);
         okButton->setStyleSheet("QPushButton { background-color: rgba(200,200,200,0.6); border: "
-                                "none; border-radius: 10px; font-size: 14px; }"
+                                "none; border-radius: 10px; font-size: 16px; }"
                                 "QPushButton:hover { background-color: rgba(180,180,180,0.8); }");
     }
     if (cancelButton) {
-        cancelButton->setFixedSize(66, 33);
+        cancelButton->setFixedSize(100, 40);
         cancelButton->setStyleSheet(
             "QPushButton { background-color: rgba(200,200,200,0.6); border: none; border-radius: "
-            "10px; font-size: 14px; }"
+            "10px; font-size: 16px; }"
             "QPushButton:hover { background-color: rgba(180,180,180,0.8); }");
     }
 
@@ -160,9 +186,18 @@ void AuthDialog::chooseAvatar() {
     QPixmap pixmap;
     pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
     if (!pixmap.isNull()) {
-        avatarLabel->setPixmap(
-            pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        avatarLabel->setStyleSheet("border-radius: 32px;");
+        QPixmap scaled = pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QPixmap rounded(64, 64);
+        rounded.fill(Qt::transparent);
+
+        QPainter painter(&rounded);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setBrush(QBrush(scaled));
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
+
+        avatarLabel->setPixmap(rounded);
+        avatarLabel->setStyleSheet("border: none;");
     }
 }
 

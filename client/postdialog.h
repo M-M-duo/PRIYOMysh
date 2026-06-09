@@ -2,6 +2,7 @@
 #define POSTDIALOG_H
 
 #include <QDialog>
+#include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -26,6 +27,7 @@ private slots:
 private:
     QTextEdit *descriptionEdit;
     QLineEdit *tagsEdit;
+    QGridLayout *imagesLayout;
     QVector<QLabel *> imageSlots;
     QStringList imagesBase64;
     QPushButton *publishButton;
@@ -35,6 +37,7 @@ private:
     void setupUI();
     QString cropAndToBase64(const QString &filePath);
     void updateImageSlot(int index, const QString &base64);
+    bool isValidImage(const QString &filePath);
 };
 
 #endif

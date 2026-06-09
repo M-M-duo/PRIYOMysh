@@ -1,100 +1,102 @@
 #ifndef FEEDWINDOW_H
 #define FEEDWINDOW_H
 
-#include <QJsonArray>
 #include <QJsonObject>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMap>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVBoxLayout>
 
-class FriendFinder;
 class PostWidget;
+class FriendFinder;
+class QNetworkReply;
 
 class FeedWindow : public QMainWindow {
     Q_OBJECT
+    friend class PostWidget;
+    friend class FriendFinder;
+
 public:
     explicit FeedWindow(const QString &token, QWidget *parent = nullptr);
     ~FeedWindow();
 
-    void loadFeed(bool friendsOnly = false);
     void loadProfile(const QString &id);
-    void loadMyProfile();
-
-public slots:
-    void onAuthorClicked(const QString &authorId);
     void onLikeDislike(const QString &postId, bool isLike);
+    void onAuthorClicked(const QString &authorId, bool isMePost);
+
+signals:
+    void logoutRequested();
 
 private slots:
-    void loadPosts(bool append = false);
-    void loadMore();
     void onCreatePost();
     void onProfileClick();
     void onFindFriendsClicked();
     void onBackClicked();
     void onToggleFeedShared();
     void onToggleFeedFollow();
+    void loadMore();
+    void onEditProfileClicked();
+    void onFollowFromProfile();
+    void onUnfollowFromProfile();
+    void onFollowersClicked();
+    void onFollowingClicked();
+
     void onPostReplyFinished(QNetworkReply *reply);
     void onLoadPostsFinished(QNetworkReply *reply);
     void onProfileInfoFinished(QNetworkReply *reply);
-    void onFollowFromProfile();
-    void onUnfollowFromProfile();
-    void onMyLoginFinished(QNetworkReply *reply);
-    void onFollowersClicked();
-    void onFollowingClicked();
-    void onEditProfileClicked();
 
 private:
+    void setupUI();
+    void loadFeed(bool friendsOnly);
+    void loadPosts(bool append);
+    void loadMyProfile();
+    void updateProfileHeader(const QJsonObject &profile);
+    void clearPosts();
+    void addPost(const QJsonObject &post);
+    void showFeedButtons();
+    void showProfileButtons();
+    void resetToMainFeed();
+    void updatePostReaction(const QString &postId, int newLikes, int newDislikes);
+    void showUserList(const QString &title, const QString &endpoint);
+    void showNoPostsImage();
+    void showError(const QString &message);
+
     QNetworkAccessManager *networkManager;
     QString authToken;
-    QString myActualId;
-    QString myActualLogin;
-    QString lastPostDate;
-    QString lastPostId;
-    int limit;
-    bool friendsFeed;
-    bool isOwnProfile;
-    bool isProfileMode;
     QString currentProfileId;
     QString currentProfileLogin;
 
     QScrollArea *scrollArea;
     QWidget *scrollWidget;
     QVBoxLayout *postsLayout;
-    QPushButton *loadMoreButton;
+    QWidget *profileHeader;
+
+    QPushButton *backButton;
+    QPushButton *exitButton;
+    QPushButton *findFriendsButton;
     QPushButton *createPostButton;
     QPushButton *profileButton;
-    QPushButton *findFriendsButton;
-    QPushButton *backButton;
     QPushButton *sharedButton;
     QPushButton *followButton;
+    QPushButton *loadMoreButton;
+    QPushButton *followProfileButton;
     QPushButton *followersButton;
     QPushButton *followingButton;
     QPushButton *postsButton;
-    QPushButton *followProfileButton;
-    QLabel *loadingLabel;
-    QMap<QString, PostWidget *> m_postWidgets;
 
-    QWidget *profileHeader;
-    QLabel *profileLoginLabel;
     QLabel *avatarLabel;
+    QLabel *profileLoginLabel;
+    QLabel *loadingLabel;
 
-    void setupUI();
-    void clearPosts();
-    void addPost(const QJsonObject &post);
-    void showError(const QString &message);
-    void updatePostReaction(const QString &postId, int newLikes, int newDislikes);
-    void updateProfileHeader(const QJsonObject &profile);
-    void showNoPostsImage();
-    void fetchMyLogin();
-    void showUserList(const QString &title, const QString &endpoint);
-    void resetToMainFeed();
-    void showFeedButtons();
-    void showProfileButtons();
+    QMap<QString, PostWidget *> m_postWidgets;
+    QString lastPostId;
+    QString lastPostDate;
+    int limit;
+    bool friendsFeed;
+    bool isProfileMode;
 };
 
-#endif
+#endif // FEEDWINDOW_H

@@ -2,6 +2,7 @@
 #include <QBuffer>
 #include <QEvent>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
@@ -18,6 +19,10 @@ PostDialog::PostDialog(QWidget *parent) : QDialog(parent) {
 
 void PostDialog::setupUI() {
     setWindowTitle("Create Post");
+    setFixedWidth(350);
+
+    move(50, 180);
+
     QVBoxLayout *layout = new QVBoxLayout(this);
 
     layout->addWidget(new QLabel("Description:"));
@@ -28,7 +33,8 @@ void PostDialog::setupUI() {
     layout->addWidget(descriptionEdit);
 
     layout->addWidget(new QLabel("Images (max 10):"));
-    QHBoxLayout *imagesLayout = new QHBoxLayout();
+
+    imagesLayout = new QGridLayout();
     for (int i = 0; i < 10; ++i) {
         QLabel *slot = new QLabel(this);
         slot->setFixedSize(60, 60);
@@ -36,7 +42,7 @@ void PostDialog::setupUI() {
         slot->setAlignment(Qt::AlignCenter);
         slot->setScaledContents(true);
         slot->installEventFilter(this);
-        imagesLayout->addWidget(slot);
+        imagesLayout->addWidget(slot, i / 5, i % 5);
         imageSlots.append(slot);
     }
     layout->addLayout(imagesLayout);
@@ -78,23 +84,42 @@ bool PostDialog::eventFilter(QObject *obj, QEvent *event) {
     return QDialog::eventFilter(obj, event);
 }
 
+bool PostDialog::isValidImage(const QString &filePath) {
+    QString ext = QFileInfo(filePath).suffix().toLower();
+    return (ext == "jpg" || ext == "jpeg" || ext == "png");
+}
+
 void PostDialog::chooseImage(int index) {
-    QString filePath =
-        QFileDialog::getOpenFileName(this, "Select Image", "", "Images (*.png *.jpg *.jpeg *.bmp)");
-    if (filePath.isEmpty())
+    QStringList filePaths =
+        QFileDialog::getOpenFileNames(this, "Select Images", "", "Images (*.png *.jpg *.jpeg)");
+
+    if (filePaths.isEmpty())
         return;
 
-    QString base64 = cropAndToBase64(filePath);
-    if (base64.isEmpty()) {
-        QMessageBox::warning(this, "Error", "Failed to load image");
-        return;
+    int currentSlot = index;
+    for (const QString &path : filePaths) {
+        if (currentSlot >= 10)
+            break;
+
+        if (!isValidImage(path)) {
+            QMessageBox::warning(this, "Error",
+                                 "Unsupported format: " + QFileInfo(path).fileName());
+            continue;
+        }
+
+        QString base64 = cropAndToBase64(path);
+        if (base64.isEmpty())
+            continue;
+
+        if (currentSlot < imagesBase64.size()) {
+            imagesBase64[currentSlot] = base64;
+        } else {
+            imagesBase64.append(base64);
+        }
+
+        updateImageSlot(currentSlot, base64);
+        currentSlot++;
     }
-    if (index < imagesBase64.size()) {
-        imagesBase64[index] = base64;
-    } else {
-        imagesBase64.append(base64);
-    }
-    updateImageSlot(index, base64);
 }
 
 QString PostDialog::cropAndToBase64(const QString &filePath) {

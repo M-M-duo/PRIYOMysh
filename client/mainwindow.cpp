@@ -13,6 +13,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QScreen>
+#include <QStackedWidget>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -55,30 +56,35 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
     msgBox.exec();
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nullptr) {
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent), currentDialog(nullptr), feedWindow(nullptr) {
     networkManager = new QNetworkAccessManager(this);
     setWindowTitle("PRIYOMYSH");
     setFixedSize(450, 840);
-    move(0, 0);
+    // move(0, 0);
     setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setWindowFlags(windowFlags() & ~Qt::WindowMinimizeButtonHint);
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
-    QWidget *central = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(central);
+    stackedWidget = new QStackedWidget(this);
+    setCentralWidget(stackedWidget);
+
+    loginWidget = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(loginWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    QWidget *topWidget = new QWidget(this);
+    QWidget *topWidget = new QWidget(loginWidget);
     topWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QVBoxLayout *topLayout = new QVBoxLayout(topWidget);
     topLayout->setAlignment(Qt::AlignCenter);
-    QLabel *logoLabel = new QLabel(this);
+
+    QLabel *logoLabel = new QLabel(topWidget);
+    logoLabel->setFixedSize(380, 509);
+    logoLabel->setScaledContents(true);
     QPixmap logoPixmap(":/sources/enter_logo.png");
     if (!logoPixmap.isNull()) {
-        QPixmap scaledLogo =
-            logoPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        logoLabel->setPixmap(scaledLogo);
+        logoLabel->setPixmap(logoPixmap);
     } else {
         logoLabel->setText("Logo");
     }
@@ -86,13 +92,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     topLayout->addWidget(logoLabel);
     mainLayout->addWidget(topWidget, 1);
 
-    QWidget *bottomWidget = new QWidget(this);
+    QWidget *bottomWidget = new QWidget(loginWidget);
     QVBoxLayout *bottomLayout = new QVBoxLayout(bottomWidget);
     bottomLayout->setContentsMargins(15, 0, 15, 10);
     bottomLayout->setSpacing(10);
 
-    QPushButton *loginBtn = new QPushButton("Login", this);
-    QPushButton *registerBtn = new QPushButton("Register", this);
+    QPushButton *loginBtn = new QPushButton("Login", bottomWidget);
+    QPushButton *registerBtn = new QPushButton("Register", bottomWidget);
 
     loginBtn->setFixedHeight(48);
     registerBtn->setFixedHeight(48);
@@ -104,7 +110,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     bottomLayout->addWidget(registerBtn);
 
     mainLayout->addWidget(bottomWidget);
-    setCentralWidget(central);
+
+    stackedWidget->addWidget(loginWidget);
 
     QString buttonStyle = R"(
         QPushButton {
@@ -126,6 +133,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     registerBtn->setStyleSheet(buttonStyle);
 
     connect(loginBtn, &QPushButton::clicked, [this]() {
+        if (currentDialog) {
+            currentDialog->deleteLater();
+        }
+
         AuthDialog *dialog = new AuthDialog("login", this);
         currentDialog = dialog;
         connect(dialog, &AuthDialog::loginClicked, this, &MainWindow::onLoginClicked);
@@ -133,6 +144,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
     });
 
     connect(registerBtn, &QPushButton::clicked, [this]() {
+        if (currentDialog) {
+            currentDialog->deleteLater();
+        }
+
         AuthDialog *dialog = new AuthDialog("register", this);
         currentDialog = dialog;
         connect(dialog, &AuthDialog::registerClicked, this, &MainWindow::onRegisterClicked);
@@ -141,6 +156,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), currentDialog(nul
 }
 
 MainWindow::~MainWindow() {}
+
+void MainWindow::onLogout() {
+    if (feedWindow) {
+        stackedWidget->removeWidget(feedWindow);
+        feedWindow->deleteLater();
+        feedWindow = nullptr;
+    }
+    stackedWidget->setCurrentWidget(loginWidget);
+}
 
 void MainWindow::onLoginClicked(const QString &login, const QString &password) {
     pendingLogin = login;
@@ -218,14 +242,23 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             QJsonObject obj = doc.object();
             if (obj.contains("token")) {
                 QString token = obj["token"].toString();
-                FeedWindow *feed = new FeedWindow(token);
-                feed->show();
+
+                if (feedWindow) {
+                    stackedWidget->removeWidget(feedWindow);
+                    feedWindow->deleteLater();
+                }
+
+                feedWindow = new FeedWindow(token, this);
+                stackedWidget->addWidget(feedWindow);
+                stackedWidget->setCurrentWidget(feedWindow);
+
+                connect(feedWindow, &FeedWindow::logoutRequested, this, &MainWindow::onLogout);
+
                 if (currentDialog) {
                     currentDialog->accept();
                     currentDialog->deleteLater();
                     currentDialog = nullptr;
                 }
-                close();
             } else {
                 showCustomInfo(this, "Registration successful, please sign in");
                 if (currentDialog) {
@@ -243,6 +276,7 @@ void MainWindow::onAuthReplyFinished(QNetworkReply *reply) {
             errorMsg = doc.object()["reason"].toString();
         }
         qDebug().noquote() << "===server error=> " << errorMsg;
+
         if (currentDialog) {
             showCustomError(currentDialog, errorMsg);
         } else {

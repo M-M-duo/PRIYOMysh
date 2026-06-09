@@ -18,6 +18,7 @@ public:
 signals:
     void profileUpdated(const QString &login, const QString &email, const QString &phone,
                         bool isPrivate, const QString &avatarBase64);
+    void passwordChanged();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;

@@ -100,6 +100,14 @@ void FriendFinder::searchUser() {
     clearResult();
 
     QUrl url(QString("%1/api/friends/search/%2").arg(API_BASE_URL, login));
+
+    qDebug() << "Target URL:" << url.toString();
+    qDebug() << "Authorization Token:"
+             << (authToken.isEmpty()
+                     ? "EMPTY"
+                     : "Provided (length: " + QString::number(authToken.length()) + ")");
+    qDebug() << "Searching for login:" << login;
+
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
@@ -116,11 +124,16 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
-            currentSearchId = obj["id"].isString() ? obj["id"].toString() : QString::number(obj["id"].toInt());
-            
-            bool isFollowed = obj["isFollowed"].toBool();
             bool isMe = obj["isMe"].toBool();
 
+            if (isMe) {
+                currentSearchId = "me";
+            } else {
+                currentSearchId = obj["id"].isString() ? obj["id"].toString()
+                                                       : QString::number(obj["id"].toInt());
+            }
+
+            bool isFollowed = obj["isFollowed"].toBool();
             isFollowing = isFollowed;
 
             resultLabel->setText(login);
