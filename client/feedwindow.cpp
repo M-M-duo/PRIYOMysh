@@ -117,7 +117,7 @@ public:
         }
 
         QLabel *nameLabel = new QLabel(username, this);
-        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #333;");
+        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #c5c5c5;");
 
         layout->addWidget(avatarLabel);
         layout->addWidget(nameLabel);
@@ -698,54 +698,35 @@ void FeedWindow::onProfileInfoFinished(QNetworkReply *reply) {
 }
 
 void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
-    profileLoginLabel->setText(profile["login"].toString());
-    int followers = profile["followersCount"].toInt();
-    int following = profile["followingCount"].toInt();
-    int posts = profile["postsCount"].toInt();
-    followersButton->setText(QString("%1\nfollowers").arg(followers));
-    followingButton->setText(QString("%1\nfollowing").arg(following));
-    postsButton->setText(QString("%1\nposts").arg(posts));
-
-    if (profile.contains("image") && !profile["image"].toString().isEmpty()) {
-        QString base64 = profile["image"].toString();
-        QPixmap pixmap;
-        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
-        if (!pixmap.isNull()) {
-            QPixmap scaled = pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            QPixmap rounded(120, 120);
-            rounded.fill(Qt::transparent);
-            QPainter painter(&rounded);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.setBrush(QBrush(scaled));
-            painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(0, 0, 120, 120, 60, 60);
-            avatarLabel->setPixmap(rounded);
-            avatarLabel->setStyleSheet("border: none;");
-        }
-    }
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
+    QString btnStyle = "QPushButton { "
+                       "   background-color: rgba(0,0,0,0.1); "
+                       "   border: none; "
+                       "   border-radius: 10px; "
+                       "   font-size: 14px; "
+                       "   color: #c5c5c5; " // Твой цвет текста
+                       "} "
+                       "QPushButton:hover { background-color: rgba(0,0,0,0.3); }";
+
     if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
         followProfileButton->setFixedWidth(420);
         followProfileButton->setText("Edit profile");
         followProfileButton->setEnabled(true);
-        followProfileButton->setStyleSheet(
-            "QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; "
-            "font-size: 14px; }"
-            "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
+        followProfileButton->setStyleSheet(btnStyle);
+
         disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
         connect(followProfileButton, &QPushButton::clicked, this,
                 &FeedWindow::onEditProfileClicked);
     } else {
         followProfileButton->setVisible(true);
         followProfileButton->setFixedWidth(420);
+
         bool isFollowing = profile["isFollowing"].toBool();
         followProfileButton->setText(isFollowing ? "Unfollow" : "Follow");
         followProfileButton->setEnabled(true);
-        followProfileButton->setStyleSheet(
-            "QPushButton { background-color: rgba(0,0,0,0.1); border: none; border-radius: 10px; "
-            "font-size: 14px; }"
-            "QPushButton:hover { background-color: rgba(0,0,0,0.3); }");
+        followProfileButton->setStyleSheet(btnStyle);
+
         disconnect(followProfileButton, &QPushButton::clicked, this, nullptr);
         if (isFollowing) {
             connect(followProfileButton, &QPushButton::clicked, this,

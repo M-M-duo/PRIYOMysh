@@ -270,7 +270,7 @@ void EditProfileDialog::onPasswordUpdated() {
 
     if (reply->error() == QNetworkReply::NoError) {
         showMessage("Password updated successfully", ":/sources/warn_happy.png");
-        
+
         emit passwordChanged();
         accept();
     } else {
