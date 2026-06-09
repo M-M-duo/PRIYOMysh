@@ -726,7 +726,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
-        followProfileButton->setFixedWidth(420);
+        followProfileButton->setFixedWidth(390);
         followProfileButton->setText("Edit profile");
         followProfileButton->setEnabled(true);
         followProfileButton->setStyleSheet(
