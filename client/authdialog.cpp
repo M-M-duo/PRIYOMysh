@@ -132,8 +132,6 @@ void AuthDialog::setupUI() {
         layout->addWidget(privateCheckBox);
     }
 
-    layout->addSpacing(10);
-
     QDialogButtonBox *buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     layout->addWidget(buttonBox, 0, Qt::AlignCenter);
