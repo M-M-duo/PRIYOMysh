@@ -1,9 +1,9 @@
 #include "profiledialog.h"
 #include <QFormLayout>
 #include <QLabel>
-#include <QVBoxLayout>
 #include <QPainter>
 #include <QPixmap>
+#include <QVBoxLayout>
 
 static QPixmap getRoundedAvatar(const QString &base64, int size = 64) {
     QPixmap pixmap;
@@ -44,7 +44,8 @@ void ProfileDialog::setupUI(const QJsonObject &userData) {
 
     QLabel *avatarLabel = new QLabel(this);
     avatarLabel->setAlignment(Qt::AlignCenter);
-    QString base64 = userData.contains("image") ? userData["image"].toString() : userData["avatar"].toString();
+    QString base64 =
+        userData.contains("image") ? userData["image"].toString() : userData["avatar"].toString();
     QPixmap avatar = getRoundedAvatar(base64, 128);
     avatarLabel->setPixmap(avatar);
     mainLayout->addWidget(avatarLabel);

@@ -734,19 +734,28 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
 
 void FeedWindow::showNoPostsImage() {
     clearPosts();
+
     QPixmap noPostsPixmap(":/sources/no_posts.png");
+
+    if (noPostsPixmap.isNull()) {
+        qDebug() << "CRITICAL: Could not load :/sources/no_posts.png";
+    }
+
+    QLabel *imageLabel = new QLabel(this);
     if (!noPostsPixmap.isNull()) {
-        QLabel *imageLabel = new QLabel(this);
         QPixmap scaled =
             noPostsPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         imageLabel->setPixmap(scaled);
-        imageLabel->setAlignment(Qt::AlignCenter);
-        postsLayout->addWidget(imageLabel);
     } else {
-        QLabel *infoLabel = new QLabel("No posts available", this);
-        infoLabel->setAlignment(Qt::AlignCenter);
-        postsLayout->addWidget(infoLabel);
+        imageLabel->setText("No posts available");
+        imageLabel->setStyleSheet("color: #6c757d;");
     }
+
+    imageLabel->setAlignment(Qt::AlignCenter);
+    postsLayout->addWidget(imageLabel);
+
+    scrollWidget->adjustSize();
+    scrollArea->update();
 }
 
 void FeedWindow::clearPosts() {
