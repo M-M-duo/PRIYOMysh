@@ -1,7 +1,9 @@
-name: Code Quality Check
+name: Code Quality and Testing Pipeline
 
 on:
   pull_request:
+    branches: [ main, develop ]
+  push:
     branches: [ main, develop ]
 
 jobs:
@@ -18,9 +20,10 @@ jobs:
 
     - name: Check Code Style (clang-format)
       run: |
-        find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path './build/*' -not -path './third_party/*' -print0 | xargs -0 clang-format-15 --dry-run --Werror
+        find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path '*/build/*' -not -path '*/third_party/*' -print0 | xargs -0 clang-format-15 --dry-run --Werror
 
-  testing:
+
+  client-testing:
     name: Build and Run Client Tests
     needs: linting
     runs-on: ubuntu-24.04
@@ -49,3 +52,135 @@ jobs:
         cd client/build
         export QT_QPA_PLATFORM=offscreen
         ./ping_monitor_tests
+
+
+  server-testing:
+    name: Build and Run Server Tests
+    needs: linting
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: priyomysh_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Server Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          g++ \
+          libjsoncpp-dev \
+          libssl-dev \
+          libpq-dev \
+          uuid-dev \
+          postgresql-client
+
+    - name: Install jwt-cpp and picojson Libraries
+      run: |
+        git clone https://github.com/Thalhammer/jwt-cpp.git
+        sudo cp -r jwt-cpp/include/jwt-cpp /usr/local/include/
+        rm -rf jwt-cpp
+      
+        mkdir -p picojson_download
+        cd picojson_download
+        git clone https://github.com/kazuho/picojson.git
+        sudo mkdir -p /usr/local/include/picojson
+        sudo cp picojson/picojson.h /usr/local/include/picojson/
+        cd ..
+        rm -rf picojson_download
+        
+    - name: Cache Drogon Framework
+      id: cache-drogon
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/include/drogon
+          /usr/local/lib/libdrogon*
+          /usr/local/lib/cmake/Drogon
+        key: ${{ runner.os }}-drogon-v1
+
+    - name: Build and Install Drogon Framework
+      if: steps.cache-drogon.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/drogonframework/drogon.git
+        cd drogon
+        git submodule update --init
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j2
+        sudo make install
+        cd ../..
+        rm -rf drogon
+
+    - name: Configure and Build Server
+      run: |
+        cd server
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug
+        cmake --build . --parallel 2
+
+    - name: Initialize Database Schema
+      env:
+        PGPASSWORD: test_password
+      run: |
+        psql -h 127.0.0.1 -U test_user -d priyomysh_db -f server/tests/init.sql
+
+    - name: Run C++ Helpers Tests
+      env:
+        POSTGRES_HOST: 127.0.0.1
+        POSTGRES_PORT: 5432
+        POSTGRES_DATABASE: priyomysh_db
+        POSTGRES_USERNAME: test_user
+        POSTGRES_PASSWORD: test_password
+      run: |
+        cd server/build
+        ./test_helpers
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python Dependencies
+      run: |
+        cd server
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        else
+          pip install pytest requests
+        fi
+
+    - name: Run Python E2E Tests (pytest)
+      env:
+        POSTGRES_HOST: 127.0.0.1
+        POSTGRES_PORT: 5432
+        POSTGRES_DATABASE: priyomysh_db
+        POSTGRES_USERNAME: test_user
+        POSTGRES_PASSWORD: test_password
+      run: |
+        cd server/build
+        
+        ./drogon_app > server_exec.log 2>&1 &
+        SERVER_PID=$!
+        
+        sleep 3
+        
+        cd ../tests
+        pytest -v
+        
+        kill $SERVER_PID

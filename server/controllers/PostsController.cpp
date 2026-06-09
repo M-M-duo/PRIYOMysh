@@ -13,7 +13,7 @@ static void fetchPost(const std::string &postId, const std::string &currentLogin
                       std::function<void(const Json::Value &, int)> callback) {
     auto db = getDbClient();
     db->execSqlAsync(
-        R"sql(SELECT p.*, u.login as author, u.is_public as author_public, 
+        R"sql(SELECT p.*, u.login as author, u.id_uuid as author_id, u.is_public as author_public, 
                      (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
                      (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
                      (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
@@ -26,6 +26,7 @@ static void fetchPost(const std::string &postId, const std::string &currentLogin
             }
             auto row = r[0];
             std::string author = row["author"].as<std::string>();
+            std::string author_id = row["author_id"].as<std::string>();
             bool authorPublic = row["author_public"].as<bool>();
             std::string imagesStr = row["images"].as<std::string>();
             std::string tagsStr = row["tags1"].as<std::string>();
@@ -60,6 +61,7 @@ static void fetchPost(const std::string &postId, const std::string &currentLogin
             post["id"] = row["id_uuid"].as<std::string>();
             post["content"] = row["content"].as<std::string>();
             post["author"] = author;
+            post["author_id"] = author_id;
             for (const auto &t : tags) {
                 post["tags"].append(t);
             }
@@ -85,27 +87,34 @@ static void fetchPost(const std::string &postId, const std::string &currentLogin
         postId);
 }
 
-static std::pair<int, int> parseLimitOffset(const drogon::HttpRequestPtr &req) {
+static int parseLimit(const drogon::HttpRequestPtr &req) {
     int limit = 5;
     auto limitParam = req->getParameter("limit");
     if (!limitParam.empty()) {
         limit = std::stoi(limitParam);
     }
-    int offset = 0;
-    auto offsetParam = req->getParameter("offset");
-    if (!offsetParam.empty()) {
-        offset = std::stoi(offsetParam);
-    }
-    return {limit, offset};
+    return limit;
 }
 
 static Json::Value buildPostsJson(const drogon::orm::Result &r) {
     Json::Value posts(Json::arrayValue);
     for (const auto &row : r) {
+        std::string imagePath = row["author_avatar"].as<std::string>();
+        std::string imageBase64;
+        if (!imagePath.empty()) {
+            imageBase64 = loadImageAsBase64(imagePath);
+        }
+
         Json::Value post;
         post["id"] = row["id_uuid"].as<std::string>();
         post["content"] = row["content"].as<std::string>();
         post["author"] = row["author"].as<std::string>();
+        post["author_id"] = row["author_id"].as<std::string>();
+        if (!imageBase64.empty()) {
+            post["author_avatar"] = imageBase64;
+        } else {
+            post["author_avatar"] = Json::nullValue;
+        }
 
         std::string tagsStr = row["tags1"].as<std::string>();
         if (!tagsStr.empty()) {
@@ -211,7 +220,7 @@ static void setReaction(const HttpRequestPtr &req,
 
         auto db = getDbClient();
         db->execSqlAsync(
-            R"sql(SELECT p.id FROM posts p JOIN users u ON u.login = p.author WHERE p.id_uuid = $1 
+            R"sql(SELECT p.id FROM posts p JOIN users u ON u.id = p.author_id WHERE p.id_uuid = $1 
             AND (u.is_public = true OR u.login = $2 OR EXISTS (SELECT 1 FROM friends 
             WHERE id_friend = u.id AND id_user = (SELECT id FROM users WHERE login = $2))))sql",
             [callback, postId, currentLogin, isLike, db](const drogon::orm::Result &r) {
@@ -220,14 +229,15 @@ static void setReaction(const HttpRequestPtr &req,
                     return;
                 }
                 db->execSqlAsync(
-                    R"sql(INSERT INTO likes (id_post, author, is_like) 
+                    R"sql(INSERT INTO likes (id_post, author_id, is_like) 
                     VALUES ((SELECT id FROM posts WHERE id_uuid = $1), (SELECT id FROM users WHERE login = $2), $3) 
                     ON CONFLICT (id_post, author_id) DO UPDATE SET is_like = $3)sql",
                     [callback, postId, isLike](const drogon::orm::Result &) {
                         auto db2 = getDbClient();
                         db2->execSqlAsync(
                             R"sql(
-                                SELECT p.id_uuid, p.content, p.author, p.created_at,
+                                SELECT p.id_uuid, p.content, (SELECT login FROM users u WHERE u.id = p.author_id) as author, 
+                                       (SELECT id_uuid FROM users u WHERE u.id = p.author_id) as author_id, p.created_at,
                                        (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
                                        (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
                                        (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
@@ -244,6 +254,7 @@ static void setReaction(const HttpRequestPtr &req,
                                 result["id"] = row["id_uuid"].as<std::string>();
                                 result["content"] = row["content"].as<std::string>();
                                 result["author"] = row["author"].as<std::string>();
+                                result["author_id"] = row["author_id"].as<std::string>();
 
                                 std::string tagsStr = row["tags1"].as<std::string>();
                                 if (!tagsStr.empty()) {
@@ -342,7 +353,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
 
         db->execSqlAsync(
             R"sql(INSERT INTO posts (content, author_id, created_at) VALUES ($1, (SELECT id FROM users WHERE login = $2), 
-            CURRENT_TIMESTAMP) RETURNING id, id_uuid, created_at)sql",
+            CURRENT_TIMESTAMP) RETURNING id, id_uuid, (SELECT id_uuid FROM users WHERE login = $2) as author_id, created_at)sql",
             [callback, tags, login, content, imgArray](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     Json::Value ret;
@@ -353,6 +364,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                     return;
                 }
                 int postId = r[0]["id"].as<int>();
+                std::string author_id = r[0]["author_id"].as<std::string>();
                 std::string uuid = r[0]["id_uuid"].as<std::string>();
                 std::string createdAt = r[0]["created_at"].as<std::string>();
 
@@ -370,6 +382,7 @@ void PostsController::newPost(const HttpRequestPtr &req, Callback &&callback) {
                 post["id"] = uuid;
                 post["content"] = content;
                 post["author"] = login;
+                post["author_id"] = author_id;
                 for (const auto &tag : tags) {
                     post["tags"].append(tag.asString());
                 }
@@ -409,7 +422,7 @@ void PostsController::getPost(const HttpRequestPtr &req, Callback &&callback, st
                 sendInternalError(callback);
                 return;
             }
-            // здесь потом добавить подсчет лайков
+
             auto resp = HttpResponse::newHttpJsonResponse(post);
             resp->setStatusCode(k200OK);
             callback(resp);
@@ -424,90 +437,153 @@ void PostsController::myFeed(const HttpRequestPtr &req, Callback &&callback) {
             return;
         }
         std::string currentLogin = *loginOpt;
-        auto [lim, off] = parseLimitOffset(req);
-        int limit = lim, offset = off;
+        int limit = parseLimit(req);
 
-        if (limit < 0 || offset < 0) {
-            sendBadRequest("limit or offset is incorrect", callback);
+        if (limit < 0) {
+            sendBadRequest("limit is incorrect", callback);
             return;
         }
 
+        std::string cursor = req->getParameter("cursor").empty() ? "" : req->getParameter("cursor");
+        std::string lastTimestamp;
+        std::string lastId;
+        if (!cursor.empty()) {
+            size_t colonPos = cursor.rfind(':');
+            if (colonPos != std::string::npos) {
+                lastTimestamp = cursor.substr(0, colonPos);
+                try {
+                    lastId = cursor.substr(colonPos + 1);
+                } catch (...) {
+                    sendBadRequest("Invalid cursor format", callback);
+                    return;
+                }
+            } else {
+                sendBadRequest("Invalid cursor format", callback);
+                return;
+            }
+        }
+
         auto db = getDbClient();
-        db->execSqlAsync(
-            R"sql(
-                SELECT p.id_uuid, p.content, p.created_at, u.login as author,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
-                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
-                FROM posts p
-                JOIN users u ON u.id = p.author_id
-                WHERE p.author_id = (SELECT id FROM users WHERE login = $1)
-                ORDER BY p.created_at DESC
-                LIMIT $2 OFFSET $3
-            )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback), currentLogin,
-            std::to_string(limit), std::to_string(offset));
+
+        std::string baseSql = R"sql(
+            SELECT p.id_uuid, p.content, p.created_at, u.login as author, u.id_uuid as author_id, u.image as author_avatar,
+                    (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                    (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
+                    (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
+                    (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
+            FROM posts p
+            JOIN users u ON u.id = p.author_id
+            WHERE p.author_id = (SELECT id FROM users WHERE login = $1)
+        )sql";
+
+        std::string orderLimit = R"sql( ORDER BY p.created_at DESC, p.id DESC LIMIT $)sql" +
+                                 std::to_string(cursor.empty() ? 2 : 4);
+        ;
+
+        std::string sql;
+        if (cursor.empty()) {
+            sql = baseSql + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, std::to_string(limit));
+        } else {
+            sql =
+                baseSql + " AND (p.created_at, p.id_uuid) < ($2::timestamp, $3::uuid)" + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, lastTimestamp, lastId, std::to_string(limit));
+        }
     });
 }
 
-void PostsController::userFeed(const HttpRequestPtr &req, Callback &&callback, std::string login) {
-    verifyToken(req, [callback, req, login](std::optional<std::string> currentLoginOpt) {
+void PostsController::userFeed(const HttpRequestPtr &req, Callback &&callback,
+                               std::string targetUserId) {
+    verifyToken(req, [callback, req, targetUserId](std::optional<std::string> currentLoginOpt) {
         if (!currentLoginOpt) {
             sendUnauthorized(callback);
             return;
         }
         std::string currentLogin = *currentLoginOpt;
-        auto [lim, off] = parseLimitOffset(req);
-        int limit = lim, offset = off;
 
-        if (limit < 0 || offset < 0) {
-            sendBadRequest("limit or offset is incorrect", callback);
+        int limit = parseLimit(req);
+        if (limit < 0) {
+            sendBadRequest("limit is incorrect", callback);
             return;
+        }
+
+        std::string cursor = req->getParameter("cursor").empty() ? "" : req->getParameter("cursor");
+        std::string lastTimestamp;
+        std::string lastId;
+        if (!cursor.empty()) {
+            size_t colonPos = cursor.rfind(':');
+            if (colonPos != std::string::npos) {
+                lastTimestamp = cursor.substr(0, colonPos);
+                lastId = cursor.substr(colonPos + 1);
+            } else {
+                sendBadRequest("Invalid cursor format", callback);
+                return;
+            }
         }
 
         auto db = getDbClient();
         db->execSqlAsync(
-            R"sql(SELECT is_public FROM users WHERE login = $1)sql",
-            [callback, db, currentLogin, login, limit, offset](const drogon::orm::Result &r) {
+            R"sql(SELECT id, is_public, login FROM users WHERE id_uuid = $1::uuid)sql",
+            [callback, db, currentLogin, targetUserId, limit, cursor, lastTimestamp,
+             lastId](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     sendNotFound("User not found", callback);
                     return;
                 }
+                int targetIntId = r[0]["id"].as<int>();
                 bool isPublic = r[0]["is_public"].as<bool>();
+                std::string targetLogin = r[0]["login"].as<std::string>();
 
-                if (currentLogin != login && !isPublic) {
+                auto fetchPosts = [callback, db, targetIntId, limit, cursor, lastTimestamp,
+                                   lastId]() {
+                    std::string baseSql = R"sql(
+                            SELECT p.id_uuid, p.content, p.created_at, u.login as author, u.id_uuid as author_id, u.image as author_avatar,
+                                   (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
+                                   (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
+                                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
+                                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
+                            FROM posts p
+                            JOIN users u ON u.id = p.author_id
+                            WHERE p.author_id = $1
+                        )sql";
+
+                    std::string orderLimit = " ORDER BY p.created_at DESC, p.id DESC LIMIT $" +
+                                             std::to_string(cursor.empty() ? 2 : 4);
+
+                    if (cursor.empty()) {
+                        std::string sql = baseSql + orderLimit;
+                        db->execSqlAsync(sql, sendPostsResponse(callback),
+                                         sendDbErrorResponse(callback), targetIntId,
+                                         std::to_string(limit));
+                    } else {
+                        std::string sql =
+                            baseSql + " AND (p.created_at, p.id_uuid) < ($2::timestamp, $3::uuid)" +
+                            orderLimit;
+                        db->execSqlAsync(sql, sendPostsResponse(callback),
+                                         sendDbErrorResponse(callback), targetIntId, lastTimestamp,
+                                         lastId, std::to_string(limit));
+                    }
+                };
+
+                if (currentLogin != targetLogin && !isPublic) {
                     db->execSqlAsync(
-                        R"sql(SELECT id FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $1) 
+                        R"sql(SELECT id FROM friends WHERE id_user = $1 
                                     AND id_friend = (SELECT id FROM users WHERE login = $2))sql",
-                        [callback, currentLogin, login](const drogon::orm::Result &r) {
+                        [callback, fetchPosts](const drogon::orm::Result &r) {
                             if (r.empty()) {
-                                sendForbidden("You are not allowed to see this "
-                                              "profile",
-                                              callback);
+                                sendForbidden("You are not allowed to see this profile", callback);
                                 return;
                             }
+                            fetchPosts();
                         },
-                        sendDbErrorResponse(callback), login, currentLogin);
+                        sendDbErrorResponse(callback), targetIntId, currentLogin);
+                } else {
+                    fetchPosts();
                 }
-
-                db->execSqlAsync(
-                    R"sql(
-                        SELECT p.id_uuid, p.content, p.created_at, u.login as author,
-                               (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1, 
-                               (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
-                               (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
-                               (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
-                        FROM posts p
-                        JOIN users u ON u.id = p.author_id
-                        WHERE p.author_id = (SELECT id FROM users WHERE login = $1)
-                        ORDER BY p.created_at DESC
-                        LIMIT $2::integer OFFSET $3::integer
-                    )sql",
-                    sendPostsResponse(callback), sendDbErrorResponse(callback), login,
-                    std::to_string(limit), std::to_string(offset));
             },
-            sendDbErrorResponse(callback), login);
+            sendDbErrorResponse(callback), targetUserId);
     });
 }
 
@@ -517,47 +593,77 @@ void PostsController::newsFriendsFeed(const HttpRequestPtr &req, Callback &&call
             sendUnauthorized(callback);
             return;
         }
-        auto [lim, off] = parseLimitOffset(req);
-        int limit = lim, offset = off;
-        if (limit < 0 || offset < 0) {
-            sendBadRequest("limit or offset is incorrect", callback);
+
+        int limit = parseLimit(req);
+        if (limit < 0) {
+            sendBadRequest("limit is incorrect", callback);
             return;
         }
 
-        std::string currentLogin = *loginOpt;
+        std::string cursor = req->getParameter("cursor").empty() ? "" : req->getParameter("cursor");
+        std::string lastTimestamp;
+        std::string lastId;
+        if (!cursor.empty()) {
+            size_t colonPos = cursor.rfind(':');
+            if (colonPos != std::string::npos) {
+                lastTimestamp = cursor.substr(0, colonPos);
+                try {
+                    lastId = cursor.substr(colonPos + 1);
+                } catch (...) {
+                    sendBadRequest("Invalid cursor format", callback);
+                    return;
+                }
+            } else {
+                sendBadRequest("Invalid cursor format", callback);
+                return;
+            }
+        }
 
+        std::string currentLogin = *loginOpt;
         auto db = getDbClient();
-        db->execSqlAsync(
-            R"sql(
-                WITH curr AS (
-                    SELECT id FROM users WHERE login = $3
+
+        std::string baseSql = R"sql(
+            WITH curr AS (
+                SELECT id FROM users WHERE login = $1
+            )
+            SELECT p.id_uuid, p.content, p.created_at, u.login as author, u.id_uuid as author_id, u.image as author_avatar,
+                   (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                   (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
+                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
+                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
+            FROM posts p
+            JOIN users u ON u.id = p.author_id
+            WHERE (
+                u.login = $1
+                OR (EXISTS (
+                        SELECT 1 FROM friends f
+                        WHERE f.id_friend = u.id
+                          AND f.id_user = (SELECT id FROM curr)
+                    )
+                    AND (u.is_public = true
+                         OR EXISTS (
+                             SELECT 1 FROM friends f
+                             WHERE f.id_friend = (SELECT id FROM curr)
+                               AND f.id_user = u.id
+                         )
+                    )
                 )
-                SELECT p.id_uuid, p.content, p.created_at, u.login as author,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
-                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
-                FROM posts p
-                JOIN users u ON u.id = p.author_id
-                WHERE u.login = $3
-                   OR (EXISTS (
-                           SELECT 1 FROM friends f
-                           WHERE f.id_friend = u.id
-                             AND f.id_user = (SELECT id FROM curr)
-                       )
-                       AND (u.is_public = true
-                            OR EXISTS (
-                                SELECT 1 FROM friends f
-                                WHERE f.id_friend = (SELECT id FROM curr)
-                                  AND f.id_user = u.id
-                            )
-                       )
-                   )
-                ORDER BY p.created_at DESC
-                LIMIT $1 OFFSET $2
-            )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback), std::to_string(limit),
-            std::to_string(offset), currentLogin);
+            )
+        )sql";
+
+        std::string orderLimit = " ORDER BY p.created_at DESC, p.id DESC LIMIT $" +
+                                 std::to_string(cursor.empty() ? 2 : 4);
+
+        if (cursor.empty()) {
+            std::string sql = baseSql + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, std::to_string(limit));
+        } else {
+            std::string sql =
+                baseSql + " AND (p.created_at, p.id_uuid) < ($2::timestamp, $3::uuid)" + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, lastTimestamp, lastId, std::to_string(limit));
+        }
     });
 }
 
@@ -567,37 +673,73 @@ void PostsController::newsFeed(const HttpRequestPtr &req, Callback &&callback) {
             sendUnauthorized(callback);
             return;
         }
-        auto [lim, off] = parseLimitOffset(req);
-        int limit = lim, offset = off;
-        if (limit < 0 || offset < 0) {
-            sendBadRequest("limit or offset is incorrect", callback);
+
+        int limit = parseLimit(req);
+        if (limit < 0) {
+            sendBadRequest("limit is incorrect", callback);
             return;
         }
 
-        std::string currentLogin = *loginOpt;
+        LOG_INFO << "got limit" << limit;
 
+        std::string cursor = req->getParameter("cursor").empty() ? "" : req->getParameter("cursor");
+        LOG_INFO << cursor;
+        std::string lastTimestamp;
+        std::string lastId;
+        if (!cursor.empty()) {
+            size_t colonPos = cursor.rfind(':');
+            if (colonPos != std::string::npos) {
+                lastTimestamp = cursor.substr(0, colonPos);
+                try {
+                    lastId = cursor.substr(colonPos + 1);
+                } catch (...) {
+                    sendBadRequest("Invalid cursor format", callback);
+                    return;
+                }
+            } else {
+                sendBadRequest("Invalid cursor format", callback);
+                return;
+            }
+        }
+        LOG_INFO << "got cursor";
+
+        std::string currentLogin = *loginOpt;
         auto db = getDbClient();
-        db->execSqlAsync(
-            R"sql(
-                SELECT p.id_uuid, p.content, p.created_at, u.login as author,
-                       (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
-                       (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
-                       (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
-                FROM posts p
-                JOIN users u ON u.id = p.author_id
-                WHERE u.is_public = true
-                   OR u.login = $3
-                   OR EXISTS (
-                       SELECT 1 FROM friends f
-                       WHERE f.id_user = u.id
-                         AND f.id_friend = (SELECT id FROM users WHERE login = $3)
-                   )
-                ORDER BY p.created_at DESC
-                LIMIT $1 OFFSET $2
-            )sql",
-            sendPostsResponse(callback), sendDbErrorResponse(callback), std::to_string(limit),
-            std::to_string(offset), currentLogin);
+
+        std::string baseSql = R"sql(
+            SELECT p.id_uuid, p.content, p.created_at, u.login as author, u.id_uuid as author_id, u.image as author_avatar,
+                   (SELECT string_agg(tag, ',') FROM tags WHERE id_post = p.id) as tags1,
+                   (SELECT string_agg(img, ',') FROM media WHERE id_post = p.id) as images,
+                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = true) as likesCount,
+                   (SELECT COUNT(*) FROM likes WHERE id_post = p.id AND is_like = false) as dislikesCount
+            FROM posts p
+            JOIN users u ON u.id = p.author_id
+            WHERE (
+                u.is_public = true
+                OR u.login = $1
+                OR EXISTS (
+                    SELECT 1 FROM friends f
+                    WHERE f.id_user = u.id
+                      AND f.id_friend = (SELECT id FROM users WHERE login = $1)
+                )
+            )
+        )sql";
+
+        std::string orderLimit = " ORDER BY p.created_at DESC, p.id DESC LIMIT $" +
+                                 std::to_string(cursor.empty() ? 2 : 4);
+
+        if (cursor.empty()) {
+            LOG_INFO << "cursor is empty";
+            std::string sql = baseSql + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, std::to_string(limit));
+        } else {
+            LOG_INFO << "cursor is not empty";
+            std::string sql =
+                baseSql + " AND (p.created_at, p.id_uuid) < ($2::timestamp, $3::uuid)" + orderLimit;
+            db->execSqlAsync(sql, sendPostsResponse(callback), sendDbErrorResponse(callback),
+                             currentLogin, lastTimestamp, lastId, std::to_string(limit));
+        }
     });
 }
 

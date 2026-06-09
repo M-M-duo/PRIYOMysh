@@ -7,49 +7,106 @@
 using namespace drogon;
 
 void ProfileController::getProfile(const HttpRequestPtr &req, Callback &&callback,
-                                   std::string login) {
-    verifyToken(req, [callback, login](std::optional<std::string> loginOpt) mutable {
+                                   std::string idStr) {
+    verifyToken(req, [callback, idStr](std::optional<std::string> loginOpt) mutable {
         if (!loginOpt) {
             sendUnauthorized(callback);
             return;
         }
         std::string currentLogin = *loginOpt;
-        if (login == "me")
-            login = currentLogin;
-        bool is_me = (login == currentLogin ? true : false);
+
+        bool isMeRequest = (idStr == "me");
+        std::string uuidParam = isMeRequest ? "00000000-0000-0000-0000-000000000000" : idStr;
 
         auto db = getDbClient();
         db->execSqlAsync(
             R"sql(
-                WITH target_user AS (SELECT id, login, image, is_public FROM users WHERE login = $1),
-                     counts AS (
-                         SELECT
-                             (SELECT COUNT(*) FROM friends WHERE id_friend = (SELECT id FROM target_user)) AS followers_count,
-                             (SELECT COUNT(*) FROM friends WHERE id_user = (SELECT id FROM target_user)) AS following_count,
-                             (SELECT COUNT(*) FROM posts WHERE author_id = (SELECT id FROM users WHERE login = $1)) AS posts_count
-                     ),
-                     relations AS (
-                         SELECT
-                             EXISTS (SELECT 1 FROM friends WHERE id_user = (SELECT id FROM users WHERE login = $2) AND id_friend = (SELECT id FROM target_user)) AS is_following,
-                             EXISTS (SELECT 1 FROM friends WHERE id_user = (SELECT id FROM target_user) AND id_friend = (SELECT id FROM users WHERE login = $2)) AS is_followed_by
+                WITH curr AS (SELECT id FROM users WHERE login = $2),
+                     target_user AS (
+                         SELECT id, id_uuid, login, image, is_public FROM users 
+                         WHERE ($3::boolean = true AND login = $2) 
+                            OR ($3::boolean = false AND id_uuid = $1::uuid)
                      )
                 SELECT
-                    (SELECT login FROM target_user) AS login,
-                    (SELECT image FROM target_user) AS image,
-                    (SELECT is_public FROM target_user) AS is_public,
-                    (SELECT followers_count FROM counts) AS followers_count,
-                    (SELECT following_count FROM counts) AS following_count,
-                    (SELECT posts_count FROM counts) AS posts_count,
-                    (SELECT is_following FROM relations) AS is_following,
-                    (SELECT is_followed_by FROM relations) AS is_followed_by
+                    t.id_uuid,
+                    t.login,
+                    t.image,
+                    t.is_public,
+                    (SELECT COUNT(*) FROM friends WHERE id_friend = t.id) AS followers_count,
+                    (SELECT COUNT(*) FROM friends WHERE id_user = t.id) AS following_count,
+                    (SELECT COUNT(*) FROM posts WHERE author_id = t.id) AS posts_count,
+                    EXISTS (SELECT 1 FROM friends WHERE id_user = (SELECT id FROM curr) AND id_friend = t.id) AS is_following,
+                    EXISTS (SELECT 1 FROM friends WHERE id_user = t.id AND id_friend = (SELECT id FROM curr)) AS is_followed_by,
+                    (t.id = (SELECT id FROM curr)) AS is_me
+                FROM target_user t
             )sql",
-            [callback, currentLogin, login, is_me](const drogon::orm::Result &r) {
+            [callback, currentLogin](const drogon::orm::Result &r) {
+                if (r.empty()) {
+                    sendNotFound("User not found", callback);
+                    return;
+                }
+
+                auto row = r[0];
+                bool isPublic = row["is_public"].as<bool>();
+                bool isMe = row["is_me"].as<bool>();
+
+                std::string imagePath = row["image"].as<std::string>();
+                std::string imageBase64;
+                if (!imagePath.empty()) {
+                    imageBase64 = loadImageAsBase64(imagePath);
+                }
+
+                Json::Value profile;
+                profile["id"] = row["id_uuid"].as<std::string>();
+                profile["login"] = row["login"].as<std::string>();
+                profile["image"] =
+                    !imageBase64.empty() ? imageBase64 : Json::Value(Json::nullValue);
+
+                profile["followersCount"] = (int)row["followers_count"].as<int64_t>();
+                profile["followingCount"] = (int)row["following_count"].as<int64_t>();
+                profile["postsCount"] = (int)row["posts_count"].as<int64_t>();
+
+                profile["isFollowing"] = row["is_following"].as<bool>();
+                profile["isFollowedBy"] = row["is_followed_by"].as<bool>();
+                profile["isPublic"] = isPublic;
+                profile["isMe"] = isMe;
+                profile["allowedToSee"] = true;
+
+                if (!isMe && !isPublic && !row["is_followed_by"].as<bool>()) {
+                    profile["allowedToSee"] = false;
+                }
+
+                LOG_INFO << "Current user: " << currentLogin
+                         << " requested profile: " << profile["login"].asString();
+                LOG_INFO << profile.toStyledString();
+
+                auto resp = HttpResponse::newHttpJsonResponse(profile);
+                resp->setStatusCode(k200OK);
+                callback(resp);
+            },
+            sendDbErrorResponse(callback), uuidParam, currentLogin, isMeRequest);
+    });
+}
+
+void ProfileController::getProfileToEdit(const HttpRequestPtr &req, Callback &&callback) {
+    verifyToken(req, [callback](std::optional<std::string> loginOpt) mutable {
+        if (!loginOpt) {
+            sendUnauthorized(callback);
+            return;
+        }
+        std::string currentLogin = *loginOpt;
+
+        auto db = getDbClient();
+        db->execSqlAsync(
+            R"sql(
+                SELECT u.login AS login, u.email AS email, u.is_public AS is_public, u.phone AS phone, u.image AS image FROM users u WHERE u.login = $1
+            )sql",
+            [callback, currentLogin](const drogon::orm::Result &r) {
                 if (r.empty()) {
                     sendNotFound("User not found", callback);
                     return;
                 }
                 auto row = r[0];
-                bool isPublic = row["is_public"].as<bool>();
 
                 std::string imagePath = row["image"].as<std::string>();
                 std::string imageBase64;
@@ -64,28 +121,15 @@ void ProfileController::getProfile(const HttpRequestPtr &req, Callback &&callbac
                 } else {
                     profile["image"] = Json::nullValue;
                 }
-                profile["followersCount"] = (int)row["followers_count"].as<int64_t>();
-                profile["followingCount"] = (int)row["following_count"].as<int64_t>();
-                profile["postsCount"] = (int)row["posts_count"].as<int64_t>();
-                profile["isFollowing"] =
-                    row["is_following"]
-                        .as<bool>(); // подписан ли текущий пользователь на пользователя с login
-                profile["isFollowedBy"] =
-                    row["is_followed_by"]
-                        .as<bool>(); // подписан ли пользователь c login на текущего пользователя
-                profile["isPublic"] = isPublic;
-                profile["isMe"] = is_me;
-                profile["allowedToSee"] = true;
-                if (currentLogin != login && !isPublic && !row["is_followed_by"].as<bool>()) {
-                    profile["allowedToSee"] = false;
-                }
-                LOG_INFO << login << " " << currentLogin;
+                profile["isPublic"] = row["is_public"].as<bool>();
+                profile["email"] = row["email"].as<std::string>();
+                profile["phone"] = row["phone"].as<std::string>();
                 LOG_INFO << profile.toStyledString();
                 auto resp = HttpResponse::newHttpJsonResponse(profile);
                 resp->setStatusCode(k200OK);
                 callback(resp);
             },
-            sendDbErrorResponse(callback), login, currentLogin);
+            sendDbErrorResponse(callback), currentLogin);
     });
 }
 
@@ -184,10 +228,6 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
         }
         if (json->isMember("image")) {
             newImage = (*json)["image"].asString();
-            if (!validateImage(newImage) && !newImage.empty()) {
-                sendBadRequest("Incorrect image format", callback);
-                return;
-            }
         }
         if (json->isMember("isPublic")) {
             newIsPublic = (*json)["isPublic"].asBool();
@@ -205,7 +245,8 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
         std::string oldImagePath;
         std::string newImagePath;
 
-        auto getOldImage = [&](std::function<void()> next) {
+        auto getOldImage = [=, &oldImagePath](std::function<void()> next) {
+            LOG_INFO << "got image1";
             if (newImage.empty()) {
                 next();
                 return;
@@ -220,8 +261,8 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
                 },
                 sendDbErrorResponse(callback), currentLogin);
         };
-
-        auto saveImage = [&](std::function<void()> next) {
+        auto saveImage = [=, &oldImagePath, &newImagePath](std::function<void()> next) {
+            LOG_INFO << "got image2";
             if (newImage.empty()) {
                 next();
                 return;
@@ -243,6 +284,7 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
         };
 
         auto checkLogin = [=](std::function<void()> next) {
+            LOG_INFO << "got login";
             if (newLogin.empty()) {
                 next();
                 return;
@@ -277,6 +319,7 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
         };
 
         auto checkPhone = [=](std::function<void()> next) {
+            LOG_INFO << "got phone";
             if (newPhone.empty()) {
                 next();
                 return;
@@ -293,7 +336,7 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
                 sendDbErrorResponse(callback), newPhone, currentLogin);
         };
 
-        auto doUpdate = [=]() {
+        auto doUpdate = [=, &newImagePath] {
             std::vector<std::string> updates;
             std::vector<std::string> values;
 
@@ -309,6 +352,7 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
                 updates.push_back("phone = $" + std::to_string(updates.size() + 1));
                 values.push_back(newPhone);
             }
+            LOG_INFO << "newImagePath" << newImagePath;
             if (!newImagePath.empty()) {
                 updates.push_back("image = $" + std::to_string(updates.size() + 1));
                 values.push_back(newImagePath);
@@ -391,7 +435,7 @@ void ProfileController::updateMyProfile(const HttpRequestPtr &req, Callback &&ca
 
         auto afterSaveImage = [=]() { saveImage(doUpdate); };
         auto afterGetOldImage = [=]() { getOldImage(afterSaveImage); };
-        auto afterPhone = [=]() { checkPhone(doUpdate); };
+        auto afterPhone = [=]() { checkPhone(afterGetOldImage); };
         auto afterEmail = [=]() { checkEmail(afterPhone); };
         auto afterLogin = [=]() { checkLogin(afterEmail); };
 
