@@ -98,7 +98,8 @@ void EditProfileDialog::setupUI() {
     privateCheckBox = new QCheckBox("Private profile", this);
     layout->addWidget(privateCheckBox);
 
-    QString btnStyle = "QPushButton { background-color: rgba(200,200,200,0.6); border: none; border-radius: 10px; font-size: 16px; }"
+    QString btnStyle = "QPushButton { background-color: rgba(200,200,200,0.6); border: none; "
+                       "border-radius: 10px; font-size: 16px; }"
                        "QPushButton:hover { background-color: rgba(180,180,180,0.8); }";
 
     changePasswordButton = new QPushButton("Change password", this);
@@ -129,7 +130,7 @@ void EditProfileDialog::setupUI() {
     QHBoxLayout *pwdButtonLayout = new QHBoxLayout();
     updatePasswordButton = new QPushButton("Update", this);
     cancelPasswordButton = new QPushButton("Cancel", this);
-    
+
     updatePasswordButton->setFixedSize(100, 40);
     updatePasswordButton->setStyleSheet(btnStyle);
     cancelPasswordButton->setFixedSize(100, 40);

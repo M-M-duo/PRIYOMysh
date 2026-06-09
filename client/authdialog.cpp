@@ -60,16 +60,17 @@ void AuthDialog::setupUI() {
 
         QPixmap defaultPix(":/sources/default_ava.png");
         if (!defaultPix.isNull()) {
-            QPixmap scaled = defaultPix.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap scaled =
+                defaultPix.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             QPixmap rounded(64, 64);
             rounded.fill(Qt::transparent);
-            
+
             QPainter painter(&rounded);
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setBrush(QBrush(scaled));
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(0, 0, 64, 64, 32, 32);
-            
+
             avatarLabel->setPixmap(rounded);
             avatarLabel->setStyleSheet("border: none;");
         } else {
@@ -137,7 +138,7 @@ void AuthDialog::setupUI() {
 
     QPushButton *okButton = buttonBox->button(QDialogButtonBox::Ok);
     QPushButton *cancelButton = buttonBox->button(QDialogButtonBox::Cancel);
-    
+
     if (okButton) {
         okButton->setFixedSize(100, 40);
         okButton->setStyleSheet("QPushButton { background-color: rgba(200,200,200,0.6); border: "
@@ -188,7 +189,7 @@ void AuthDialog::chooseAvatar() {
         QPixmap scaled = pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         QPixmap rounded(64, 64);
         rounded.fill(Qt::transparent);
-        
+
         QPainter painter(&rounded);
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setBrush(QBrush(scaled));
