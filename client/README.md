@@ -12,12 +12,17 @@ cd client
 ```
 3. Start setup for dependencies
 ```
-chmod +x install_deps.sh && ./install_deps.sh
+chmod +x install_dependencies.sh && ./install_dependencies.sh
 ```
 4. Give permission for run-file and start it:
 ```bash
 chmod +x run.sh && ./run.sh
 ```
-
+5. Run modes:
+```bash
+./run.sh     // to built app only
+./run.sh -t  // to built app and tests
+./run.sh -nb // to run pre-built app
+```
 
 
