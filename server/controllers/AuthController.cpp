@@ -70,15 +70,6 @@ void AuthController::registerUser(const HttpRequestPtr &req, Callback &&callback
         return;
     }
 
-    if (!validateImage(image)) {
-        Json::Value ret;
-        ret["reason"] = "Incorrect image format";
-        auto resp = HttpResponse::newHttpJsonResponse(ret);
-        resp->setStatusCode(k400BadRequest);
-        callback(resp);
-        return;
-    }
-
     std::string avatarPath;
     if (!image.empty()) {
         const std::string mediaDir = "../media/";
@@ -186,7 +177,7 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
     }
 
     db->execSqlAsync(
-        R"sql(SELECT password, token_number, update_token FROM users WHERE login = $1)sql",
+        R"sql(SELECT id, password, token_number, update_token FROM users WHERE login = $1)sql",
         [callback, login, password](const drogon::orm::Result &r) {
             if (r.empty()) {
                 Json::Value ret;
@@ -207,15 +198,16 @@ void AuthController::signIn(const HttpRequestPtr &req, Callback &&callback) {
                 return;
             }
 
+            int user_id = row["id"].as<int>();
             int token_number = row["token_number"].as<int>();
             int update_token = row["update_token"].as<int>();
 
             auto db = getDbClient();
             db->execSqlAsync(
                 R"sql(UPDATE users SET update_token = update_token + 1 WHERE login = $1 RETURNING update_token)sql",
-                [callback, login, token_number](const drogon::orm::Result &r) {
+                [callback, user_id, token_number](const drogon::orm::Result &r) {
                     int new_update_token = r[0]["update_token"].as<int>();
-                    std::string jwt = createToken(login, token_number, new_update_token);
+                    std::string jwt = createToken(user_id, token_number, new_update_token);
                     Json::Value ret;
                     ret["token"] = jwt;
                     auto resp = HttpResponse::newHttpJsonResponse(ret);

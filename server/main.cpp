@@ -19,6 +19,7 @@ void setupDatabase() {
         R"sql(
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY, 
+            id_uuid UUID DEFAULT uuid_generate_v4(), 
             login VARCHAR(30) UNIQUE NOT NULL, 
             email VARCHAR(50) UNIQUE NOT NULL, 
             password VARCHAR(250) NOT NULL, 
@@ -48,7 +49,7 @@ void setupDatabase() {
     db->execSqlAsync(
         R"sql(CREATE TABLE IF NOT EXISTS tags (
                      id SERIAL PRIMARY KEY, 
-                     id_post INTEGER, 
+                     id_post INTEGER REFERENCES posts(id) ON DELETE CASCADE,
                      tag VARCHAR(20) NOT NULL))sql",
         [](const drogon::orm::Result &) { LOG_INFO << "tags table ready"; },
         [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); });
@@ -83,6 +84,11 @@ void setupDatabase() {
             UNIQUE(id_post, author_id)
         ))sql",
         [](const drogon::orm::Result &) { LOG_INFO << "likes table ready"; },
+        [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); });
+
+    db->execSqlAsync(
+        "CREATE INDEX IF NOT EXISTS idx_posts_created_at_id ON posts(created_at DESC, id DESC)",
+        [](const drogon::orm::Result &) { LOG_INFO << "posts index created"; },
         [](const drogon::orm::DrogonDbException &e) { LOG_ERROR << e.base().what(); });
 }
 

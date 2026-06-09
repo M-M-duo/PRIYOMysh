@@ -45,5 +45,19 @@ target_link_libraries(drogon_app PRIVATE
     ${OPENSSL_LIBRARIES}
     ${LIBPQ_LIBRARIES} 
     ${LIBXCRYPT_LIBRARY}
-    pthread
+)
+
+add_executable(test_helpers
+    tests/helpers_test.cpp 
+    controllers/AuthController.cpp
+    controllers/ProfileController.cpp
+    controllers/FriendsController.cpp
+    controllers/PostsController.cpp
+)
+
+target_link_libraries(test_helpers PRIVATE
+    Drogon::Drogon
+    ${OPENSSL_LIBRARIES}
+    ${PostgreSQL_LIBRARIES}
+    ${LIBXCRYPT_LIBRARY}
 )
