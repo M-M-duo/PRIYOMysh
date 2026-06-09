@@ -89,11 +89,19 @@ jobs:
           uuid-dev \
           postgresql-client
 
-    - name: Install jwt-cpp Library
+    - name: Install jwt-cpp and picojson Libraries
       run: |
         git clone https://github.com/Thalhammer/jwt-cpp.git
         sudo cp -r jwt-cpp/include/jwt-cpp /usr/local/include/
         rm -rf jwt-cpp
+      
+        mkdir -p picojson_download
+        cd picojson_download
+        git clone https://github.com/kazuho/picojson.git
+        sudo mkdir -p /usr/local/include/picojson
+        sudo cp picojson/picojson.h /usr/local/include/picojson/
+        cd ..
+        rm -rf picojson_download
         
     - name: Cache Drogon Framework
       id: cache-drogon
