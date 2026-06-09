@@ -79,7 +79,6 @@ static QString wrapText(const QString &text, int maxLineLength) {
     return result;
 }
 
-// Виджет для красивого отображения элемента списка (для фолловеров)
 class UserListItem : public QWidget {
 public:
     UserListItem(const QString &username, const QString &avatarBase64, QWidget *parent = nullptr)
@@ -309,7 +308,7 @@ public:
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        line->setFixedWidth(440);
+        line->setFixedWidth(420);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         if (hasImages) {
@@ -727,6 +726,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
+        followProfileButton->setFixedWidth(420);
         followProfileButton->setText("Edit profile");
         followProfileButton->setEnabled(true);
         followProfileButton->setStyleSheet(
@@ -738,6 +738,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
                 &FeedWindow::onEditProfileClicked);
     } else {
         followProfileButton->setVisible(true);
+        followProfileButton->setFixedWidth(420);
         bool isFollowing = profile["isFollowing"].toBool();
         followProfileButton->setText(isFollowing ? "Unfollow" : "Follow");
         followProfileButton->setEnabled(true);
