@@ -45,13 +45,13 @@ graph LR
 
 <!-- Вставьте реальные скриншоты, заменив пути -->
 1. Вход / регистрация  
-   <img src="screenshots/login.png" width="300"> <img src="screenshots/registration.png" width="300">
-3. Главная лента  
-   `![Лента](screenshots/feed.png)`
+   <img src="screenshots/login.png" width="300"> <img src="screenshots/registration.png" width="300"> <img src="screenshots/auth.png" width="300">
+3. Лента  
+   <img src="screenshots/feed.png" width="300"> <img src="screenshots/friends_feed.png" width="300">
 4. Создание поста  
    <img src="screenshots/new_post.png" width="300">
 5. Профиль пользователя  
-   <img src="screenshots/profile.png" width="300">
+   <img src="screenshots/profile.png" width="300"> <img src="screenshots/empty_profile.png" width="300">
 6. Редактирование профиля  
    <img src="screenshots/edit_profile.png" width="300">
 7. Друзья / подписчики  
