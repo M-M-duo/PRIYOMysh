@@ -58,12 +58,10 @@ void AuthDialog::setupUI() {
         avatarLabel->setCursor(Qt::PointingHandCursor);
         avatarLabel->installEventFilter(this);
 
-        avatarBase64 = cropAndToBase64(":/sources/default_ava.png");
-
-        if (!avatarBase64.isEmpty()) {
-            QPixmap pixmap;
-            pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
-            QPixmap scaled = pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QPixmap defaultPix(":/sources/default_ava.png");
+        if (!defaultPix.isNull()) {
+            QPixmap scaled =
+                defaultPix.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             QPixmap rounded(64, 64);
             rounded.fill(Qt::transparent);
 
@@ -161,6 +159,13 @@ void AuthDialog::setupUI() {
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
+void AuthDialog::enableButtons(bool enabled) {
+    QDialogButtonBox *buttonBox = findChild<QDialogButtonBox *>();
+    if (buttonBox) {
+        buttonBox->setEnabled(enabled);
+    }
+}
+
 bool AuthDialog::eventFilter(QObject *obj, QEvent *event) {
     if (mode == "register" && obj == phoneEdit && event->type() == QEvent::FocusIn) {
         if (phoneEdit->text().isEmpty()) {
@@ -230,10 +235,7 @@ QString AuthDialog::cropAndToBase64(const QString &filePath) {
 }
 
 void AuthDialog::onButtonClicked() {
-    QDialogButtonBox *buttonBox = findChild<QDialogButtonBox *>();
-    if (buttonBox) {
-        buttonBox->setEnabled(false);
-    }
+    // Убрали отключение кнопок, чтобы они оставались кликабельными
     if (mode == "login") {
         emit loginClicked(getLogin(), getPassword());
     } else {
