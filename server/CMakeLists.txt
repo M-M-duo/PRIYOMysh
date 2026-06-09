@@ -58,10 +58,6 @@ target_link_libraries(drogon_app PRIVATE
 
 add_executable(test_helpers
     tests/helpers_test.cpp 
-    controllers/AuthController.cpp
-    controllers/ProfileController.cpp
-    controllers/FriendsController.cpp
-    controllers/PostsController.cpp
 )
 
 target_link_libraries(test_helpers PRIVATE
