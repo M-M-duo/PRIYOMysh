@@ -6,7 +6,7 @@
 ```bash
 git clone git@github.com:M-M-duo/PRIYOMysh.git
 ```
-2. Reach the clinet repo:
+2. Reach the client repo:
 ```bash
 cd client
 ```
@@ -20,8 +20,8 @@ chmod +x run.sh && ./run.sh
 ```
 5. Run modes:
 ```bash
-./run.sh     // to built app only
-./run.sh -t  // to built app and tests
+./run.sh     // to build app only
+./run.sh -t  // to build app and tests
 ./run.sh -nb // to run pre-built app
 ```
 
