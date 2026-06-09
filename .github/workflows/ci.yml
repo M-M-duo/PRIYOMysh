@@ -21,7 +21,7 @@ jobs:
         find . -regex '.*\.\(cpp\|hpp\|h\)' -not -path './build/*' -not -path './third_party/*' -print0 | xargs -0 clang-format-15 --dry-run --Werror
 
   testing:
-    name: Build and Run Tests
+    name: Build and Run Client Tests
     needs: linting
     runs-on: ubuntu-24.04
     steps:

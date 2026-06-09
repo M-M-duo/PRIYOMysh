@@ -59,7 +59,6 @@ void EditProfileDialog::setupUI() {
     setWindowFlags(windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->setSizeConstraint(QLayout::SetFixedSize);
     layout->setAlignment(Qt::AlignCenter);
 
     QHBoxLayout *avatarLayout = new QHBoxLayout();
@@ -99,7 +98,12 @@ void EditProfileDialog::setupUI() {
     privateCheckBox = new QCheckBox("Private profile", this);
     layout->addWidget(privateCheckBox);
 
+    QString btnStyle = "QPushButton { background-color: rgba(200,200,200,0.6); border: none; border-radius: 10px; font-size: 16px; }"
+                       "QPushButton:hover { background-color: rgba(180,180,180,0.8); }";
+
     changePasswordButton = new QPushButton("Change password", this);
+    changePasswordButton->setFixedHeight(40);
+    changePasswordButton->setStyleSheet(btnStyle);
     layout->addWidget(changePasswordButton);
     connect(changePasswordButton, &QPushButton::clicked, this,
             &EditProfileDialog::onChangePasswordClicked);
@@ -125,6 +129,12 @@ void EditProfileDialog::setupUI() {
     QHBoxLayout *pwdButtonLayout = new QHBoxLayout();
     updatePasswordButton = new QPushButton("Update", this);
     cancelPasswordButton = new QPushButton("Cancel", this);
+    
+    updatePasswordButton->setFixedSize(100, 40);
+    updatePasswordButton->setStyleSheet(btnStyle);
+    cancelPasswordButton->setFixedSize(100, 40);
+    cancelPasswordButton->setStyleSheet(btnStyle);
+
     pwdButtonLayout->addWidget(updatePasswordButton);
     pwdButtonLayout->addWidget(cancelPasswordButton);
     pwdLayout->addLayout(pwdButtonLayout);
@@ -142,6 +152,19 @@ void EditProfileDialog::setupUI() {
     QDialogButtonBox *buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     layout->addWidget(buttonBox, 0, Qt::AlignCenter);
+
+    QPushButton *saveButton = buttonBox->button(QDialogButtonBox::Save);
+    QPushButton *mainCancelButton = buttonBox->button(QDialogButtonBox::Cancel);
+
+    if (saveButton) {
+        saveButton->setFixedSize(100, 40);
+        saveButton->setStyleSheet(btnStyle);
+    }
+    if (mainCancelButton) {
+        mainCancelButton->setFixedSize(100, 40);
+        mainCancelButton->setStyleSheet(btnStyle);
+    }
+
     connect(buttonBox, &QDialogButtonBox::accepted, this, &EditProfileDialog::onSaveClicked);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
