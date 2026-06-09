@@ -256,8 +256,8 @@ void EditProfileDialog::onPasswordUpdated() {
     qDebug() << "URL:" << url.toString();
     qDebug() << "Payload:" << QString::fromUtf8(data);
 
-    QNetworkAccessManager manager;
-    QNetworkReply *reply = manager.post(request, data);
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->post(request, data);
 
     QEventLoop loop;
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
@@ -283,5 +283,6 @@ void EditProfileDialog::onPasswordUpdated() {
         }
         showMessage("Password update failed: " + errorMsg, ":/sources/warning_01.png");
     }
+
     reply->deleteLater();
 }

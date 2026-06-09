@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDialog>
 #include <QEvent>
+#include <QEventLoop>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -77,6 +78,53 @@ static QString wrapText(const QString &text, int maxLineLength) {
     }
     return result;
 }
+
+// Виджет для красивого отображения элемента списка (для фолловеров)
+class UserListItem : public QWidget {
+public:
+    UserListItem(const QString &username, const QString &avatarBase64, QWidget *parent = nullptr)
+        : QWidget(parent) {
+
+        QHBoxLayout *layout = new QHBoxLayout(this);
+        layout->setContentsMargins(10, 8, 10, 8);
+        layout->setSpacing(15);
+
+        QLabel *avatarLabel = new QLabel(this);
+        avatarLabel->setFixedSize(48, 48);
+
+        QPixmap pixmap;
+        if (!avatarBase64.isEmpty()) {
+            pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
+        }
+
+        if (pixmap.isNull()) {
+            pixmap.load(":/sources/default_ava.png");
+        }
+
+        if (!pixmap.isNull()) {
+            QPixmap scaled = pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap rounded(48, 48);
+            rounded.fill(Qt::transparent);
+            QPainter painter(&rounded);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(QBrush(scaled));
+            painter.setPen(Qt::NoPen);
+            painter.drawRoundedRect(0, 0, 48, 48, 24, 24);
+            avatarLabel->setPixmap(rounded);
+        } else {
+            avatarLabel->setText("🖼️");
+            avatarLabel->setStyleSheet("background-color: #e0e0e0; border-radius: 24px;");
+            avatarLabel->setAlignment(Qt::AlignCenter);
+        }
+
+        QLabel *nameLabel = new QLabel(username, this);
+        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #333;");
+
+        layout->addWidget(avatarLabel);
+        layout->addWidget(nameLabel);
+        layout->addStretch();
+    }
+};
 
 class PostWidget : public QWidget {
 public:
@@ -872,13 +920,19 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isArray()) {
             QJsonArray posts = doc.array();
-            for (const auto &postVal : posts) {
-                QJsonObject post = postVal.toObject();
-                addPost(post);
-                lastPostId = post["id"].isString() ? post["id"].toString()
-                                                   : QString::number(post["id"].toInt());
-                lastPostDate = post["createdAt"].toString();
+            
+            if (posts.isEmpty() && lastPostId.isEmpty() && friendsFeed) {
+                showNoPostsImage();
+            } else {
+                for (const auto &postVal : posts) {
+                    QJsonObject post = postVal.toObject();
+                    addPost(post);
+                    lastPostId = post["id"].isString() ? post["id"].toString()
+                                                       : QString::number(post["id"].toInt());
+                    lastPostDate = post["createdAt"].toString();
+                }
             }
+
             if (posts.size() == limit) {
                 loadMoreButton->setVisible(true);
             } else {
@@ -983,60 +1037,91 @@ void FeedWindow::updatePostReaction(const QString &postId, int newLikes, int new
 }
 
 void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
+    QDialog dialog(this);
+    dialog.setWindowTitle(title);
+    dialog.setFixedSize(360, 480);
+    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    dialog.setWindowFlags(dialog.windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(10, 10, 10, 10);
+
+    QListWidget *listWidget = new QListWidget(&dialog);
+    listWidget->setStyleSheet(
+        "QListWidget { border: none; background-color: transparent; outline: none; }"
+        "QListWidget::item { border-bottom: 1px solid rgba(200,200,200,0.5); border-radius: 10px; }"
+        "QListWidget::item:hover { background-color: rgba(200,200,200,0.2); }"
+        "QListWidget::item:selected { background-color: rgba(180,180,180,0.4); color: black; }");
+    layout->addWidget(listWidget);
+
+    QPushButton *closeButton = new QPushButton("Close", &dialog);
+    closeButton->setFixedSize(100, 40);
+    closeButton->setStyleSheet("QPushButton { background-color: rgba(200,200,200,0.6); border: "
+                               "none; border-radius: 10px; font-size: 16px; }"
+                               "QPushButton:hover { background-color: rgba(180,180,180,0.8); }");
+    layout->addWidget(closeButton, 0, Qt::AlignCenter);
+    connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+
     QUrl url(API_BASE_URL + endpoint);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
-    QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply, title]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QByteArray response = reply->readAll();
-            QJsonDocument doc = QJsonDocument::fromJson(response);
-            if (doc.isArray()) {
-                QJsonArray users = doc.array();
-                QDialog dialog(this);
-                dialog.setWindowTitle(title);
-                dialog.resize(300, 400);
-                QVBoxLayout *layout = new QVBoxLayout(&dialog);
-                QListWidget *listWidget = new QListWidget(&dialog);
-                if (users.isEmpty()) {
-                    listWidget->addItem("No users found");
-                } else {
-                    for (const auto &userVal : users) {
-                        if (userVal.isObject()) {
-                            QJsonObject user = userVal.toObject();
-                            QString login = user["login"].toString();
-                            QString id = user["id"].isString()
-                                             ? user["id"].toString()
-                                             : QString::number(user["id"].toInt());
-                            QListWidgetItem *item = new QListWidgetItem(login, listWidget);
-                            item->setData(Qt::UserRole, id);
+    QNetworkAccessManager *manager = new QNetworkAccessManager(&dialog);
+    QNetworkReply *reply = manager->get(request);
+
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray response = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isArray()) {
+            QJsonArray users = doc.array();
+            if (users.isEmpty()) {
+                QListWidgetItem *item = new QListWidgetItem("No users found", listWidget);
+                item->setTextAlignment(Qt::AlignCenter);
+            } else {
+                for (const auto &userVal : users) {
+                    if (userVal.isObject()) {
+                        QJsonObject user = userVal.toObject();
+                        QString username = user["login"].toString();
+                        QString avatarBase64 = user["avatar"].toString();
+                        if (avatarBase64.isEmpty()) {
+                            avatarBase64 = user["image"].toString();
                         }
+                        QString id = user["id"].isString() ? user["id"].toString()
+                                                           : QString::number(user["id"].toInt());
+
+                        QListWidgetItem *item = new QListWidgetItem(listWidget);
+                        item->setSizeHint(QSize(listWidget->width() - 20, 64));
+                        item->setData(Qt::UserRole, id);
+
+                        UserListItem *customWidget =
+                            new UserListItem(username, avatarBase64, listWidget);
+                        listWidget->setItemWidget(item, customWidget);
                     }
                 }
-                layout->addWidget(listWidget);
-                QPushButton *closeBtn = new QPushButton("Close", &dialog);
-                layout->addWidget(closeBtn);
-                connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
-                connect(listWidget, &QListWidget::itemClicked,
-                        [this, &dialog](QListWidgetItem *item) {
-                            QString id = item->data(Qt::UserRole).toString();
-                            if (!id.isEmpty()) {
-                                dialog.accept();
-                                loadProfile(id);
-                            }
-                        });
-                dialog.exec();
-            } else {
-                showCustomMessage(this, "Invalid response format", ":/sources/warning_01.png");
             }
         } else {
-            showCustomMessage(this, "Failed to load " + title + ": " + reply->errorString(),
-                              ":/sources/warning_01.png");
+            showCustomMessage(this, "Invalid response format", ":/sources/warning_01.png");
         }
-        reply->deleteLater();
+    } else {
+        showCustomMessage(this, "Failed to load " + title + ": " + reply->errorString(),
+                          ":/sources/warning_01.png");
+    }
+    reply->deleteLater();
+
+    connect(listWidget, &QListWidget::itemClicked, [this, &dialog](QListWidgetItem *item) {
+        QString id = item->data(Qt::UserRole).toString();
+        if (!id.isEmpty()) {
+            dialog.accept();
+            loadProfile(id);
+        }
     });
+
+    dialog.exec();
 }
 
 void FeedWindow::onFollowersClicked() {
@@ -1065,7 +1150,8 @@ void FeedWindow::onEditProfileClicked() {
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
-    QNetworkReply *reply = networkManager->get(request);
+    QNetworkReply *reply = this->networkManager->get(request);
+
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray response = reply->readAll();
@@ -1086,49 +1172,50 @@ void FeedWindow::onEditProfileClicked() {
                 connect(&dialog, &EditProfileDialog::passwordChanged, this,
                         &FeedWindow::logoutRequested);
 
-                connect(
-                    &dialog, &EditProfileDialog::profileUpdated,
-                    [this](const QString &login, const QString &email, const QString &phone,
-                           bool isPrivate, const QString &avatarBase64) {
-                        QUrl updateUrl(API_BASE_URL + "/api/me/profile");
-                        QNetworkRequest updateRequest(updateUrl);
-                        updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
-                                                "application/json");
-                        updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+                connect(&dialog, &EditProfileDialog::profileUpdated,
+                        [this](const QString &login, const QString &email, const QString &phone,
+                               bool isPrivate, const QString &avatarBase64) {
+                            QUrl updateUrl(API_BASE_URL + "/api/me/profile");
+                            QNetworkRequest updateRequest(updateUrl);
+                            updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                                                    "application/json");
+                            updateRequest.setRawHeader("Authorization",
+                                                       "Bearer " + authToken.toUtf8());
 
-                        QJsonObject updateJson;
-                        updateJson["login"] = login;
-                        if (!email.isEmpty())
-                            updateJson["email"] = email;
-                        if (!phone.isEmpty())
-                            updateJson["phone"] = phone;
-                        updateJson["isPublic"] = !isPrivate;
-                        if (!avatarBase64.isEmpty()) {
-                            updateJson["image"] = avatarBase64;
-                        }
-
-                        QByteArray updateData = QJsonDocument(updateJson).toJson();
-
-                        QNetworkReply *updateReply =
-                            networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
-                        connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
-                            if (updateReply->error() == QNetworkReply::NoError) {
-                                showCustomMessage(this, "Profile updated",
-                                                  ":/sources/warn_happy.png");
-                                loadMyProfile();
-                            } else {
-                                QByteArray response = updateReply->readAll();
-                                QString errorMsg = updateReply->errorString();
-                                QJsonDocument doc = QJsonDocument::fromJson(response);
-                                if (doc.isObject() && doc.object().contains("reason")) {
-                                    errorMsg = doc.object()["reason"].toString();
-                                }
-                                showCustomMessage(this, "Update failed: " + errorMsg,
-                                                  ":/sources/warning_01.png");
+                            QJsonObject updateJson;
+                            updateJson["login"] = login;
+                            if (!email.isEmpty())
+                                updateJson["email"] = email;
+                            if (!phone.isEmpty())
+                                updateJson["phone"] = phone;
+                            updateJson["isPublic"] = !isPrivate;
+                            if (!avatarBase64.isEmpty()) {
+                                updateJson["image"] = avatarBase64;
                             }
-                            updateReply->deleteLater();
+
+                            QByteArray updateData = QJsonDocument(updateJson).toJson();
+
+                            QNetworkReply *updateReply = this->networkManager->sendCustomRequest(
+                                updateRequest, "PATCH", updateData);
+
+                            connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
+                                if (updateReply->error() == QNetworkReply::NoError) {
+                                    showCustomMessage(this, "Profile updated",
+                                                      ":/sources/warn_happy.png");
+                                    loadMyProfile();
+                                } else {
+                                    QByteArray response = updateReply->readAll();
+                                    QString errorMsg = updateReply->errorString();
+                                    QJsonDocument doc = QJsonDocument::fromJson(response);
+                                    if (doc.isObject() && doc.object().contains("reason")) {
+                                        errorMsg = doc.object()["reason"].toString();
+                                    }
+                                    showCustomMessage(this, "Update failed: " + errorMsg,
+                                                      ":/sources/warning_01.png");
+                                }
+                                updateReply->deleteLater();
+                            });
                         });
-                    });
                 dialog.exec();
             }
         } else {
