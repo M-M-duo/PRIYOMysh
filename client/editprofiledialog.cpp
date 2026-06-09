@@ -232,7 +232,34 @@ void EditProfileDialog::onChangePasswordClicked() {
     changePasswordButton->setVisible(false);
     passwordWidget->setVisible(true);
 }
+void EditProfileDialog::onUpdatePassword() {
+    QString current = currentPasswordEdit->text();
+    QString newPass = newPasswordEdit->text();
+    QString confirm = confirmPasswordEdit->text();
 
+    if (current.isEmpty() || newPass.isEmpty() || confirm.isEmpty()) {
+        QMessageBox::warning(this, "Validation", "All password fields are required.");
+        return;
+    }
+    if (newPass != confirm) {
+        QMessageBox::warning(this, "Validation", "New passwords do not match.");
+        return;
+    }
+
+    QUrl url(API_BASE_URL + "/api/me/password");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+
+    QJsonObject json;
+    json["currentPassword"] = current;
+    json["newPassword"] = newPass;
+    QByteArray data = QJsonDocument(json).toJson();
+
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->put(request, data);
+    connect(reply, &QNetworkReply::finished, this, &EditProfileDialog::onPasswordUpdated);
+}
 void EditProfileDialog::onPasswordUpdated() {
     QString currentPwd = currentPasswordEdit->text();
     QString newPwd = newPasswordEdit->text();

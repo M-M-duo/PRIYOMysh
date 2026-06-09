@@ -27,6 +27,7 @@ private slots:
     void onSaveClicked();
     void onChangePasswordClicked();
     void onPasswordUpdated();
+    void onUpdatePassword();
 
 private:
     QLineEdit *loginEdit;
@@ -39,6 +40,7 @@ private:
     QPushButton *changePasswordButton;
     QLineEdit *currentPasswordEdit;
     QLineEdit *newPasswordEdit;
+    QLineEdit *confirmPasswordEdit;
     QPushButton *updatePasswordButton;
     QPushButton *cancelPasswordButton;
     QWidget *passwordWidget;
