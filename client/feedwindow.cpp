@@ -94,12 +94,6 @@ static void showCustomMessage(QWidget *parent, const QString &text, const QStrin
     QDialog dialog(parent);
     dialog.setWindowTitle("PRIYOMYSH");
     dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
-    dialog.setFixedSize(360, 400);
-
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenWidth = screen->availableGeometry().width();
-    int screenHeight = screen->availableGeometry().height();
-    dialog.move((screenWidth - 360) / 2, (screenHeight - 400) / 2);
 
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(30, 30, 30, 30);
@@ -125,6 +119,7 @@ static void showCustomMessage(QWidget *parent, const QString &text, const QStrin
     layout->addWidget(okBtn, 0, Qt::AlignCenter);
 
     QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
     dialog.exec();
 }
 
