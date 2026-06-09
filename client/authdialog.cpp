@@ -58,10 +58,12 @@ void AuthDialog::setupUI() {
         avatarLabel->setCursor(Qt::PointingHandCursor);
         avatarLabel->installEventFilter(this);
 
-        QPixmap defaultPix(":/sources/default_ava.png");
-        if (!defaultPix.isNull()) {
-            QPixmap scaled =
-                defaultPix.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        avatarBase64 = cropAndToBase64(":/sources/default_ava.png");
+
+        if (!avatarBase64.isEmpty()) {
+            QPixmap pixmap;
+            pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
+            QPixmap scaled = pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             QPixmap rounded(64, 64);
             rounded.fill(Qt::transparent);
 
