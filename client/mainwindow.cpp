@@ -28,7 +28,7 @@ static void showCustomWarning(QWidget *parent, const QString &text) {
 
     QLabel *iconLabel = new QLabel();
     QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(300, 320, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     iconLabel->setPixmap(scaled);
     iconLabel->setAlignment(Qt::AlignCenter);
     layout->addWidget(iconLabel);
@@ -61,7 +61,7 @@ static void showCustomError(QWidget *parent, const QString &text) {
 
     QLabel *iconLabel = new QLabel();
     QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(300, 320, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     iconLabel->setPixmap(scaled);
     iconLabel->setAlignment(Qt::AlignCenter);
     layout->addWidget(iconLabel);
