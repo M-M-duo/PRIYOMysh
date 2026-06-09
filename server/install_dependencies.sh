@@ -75,7 +75,28 @@ install_macos() {
         exit 1
     fi
     brew update
-    brew install cmake drogon openssl ossp-uuid postgresql@14 libxcrypt
+    brew install cmake openssl ossp-uuid postgresql@14 libxcrypt jsoncpp brotli c-ares sqlite
+
+    if brew list drogon &>/dev/null; then
+        echo -e "${YELLOW}Removing brew version of Drogon...${NC}"
+        brew uninstall drogon
+    fi
+
+    echo -e "${YELLOW}Building Drogon Framework from GitHub with PostgreSQL support...${NC}"
+    git clone https://github.com/drogonframework/drogon.git /tmp/drogon_mac
+    cd /tmp/drogon_mac
+    git submodule update --init
+    mkdir -p build && cd build
+    
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DPOSTGRESQL_INCLUDE_DIR=/opt/homebrew/opt/postgresql@14/include \
+      -DPOSTGRESQL_LIBRARIES=/opt/homebrew/opt/postgresql@14/lib/libpq.dylib
+      
+    make -j$(sysctl -n hw.ncpu)
+    sudo make install
+    cd -
+    rm -rf /tmp/drogon_mac
 }
 
 detect_os
