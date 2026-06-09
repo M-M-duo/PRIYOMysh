@@ -7,7 +7,6 @@
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QNetworkRequest>
-#include <QPainter>
 #include <QScreen>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -117,48 +116,6 @@ void FriendFinder::searchUser() {
     connect(reply, &QNetworkReply::finished, [this, reply]() { onSearchFinished(reply); });
 }
 
-// void FriendFinder::onSearchFinished(QNetworkReply *reply) {
-//     if (reply->error() == QNetworkReply::NoError) {
-//         QByteArray response = reply->readAll();
-//         QJsonDocument doc = QJsonDocument::fromJson(response);
-
-//         if (doc.isObject()) {
-//             QJsonObject obj = doc.object();
-//             QString login = obj["login"].toString();
-//             bool isMe = obj["isMe"].toBool();
-
-//             if (isMe) {
-//                 currentSearchId = "me";
-//             } else {
-//                 currentSearchId = obj["id"].isString() ? obj["id"].toString()
-//                                                        : QString::number(obj["id"].toInt());
-//             }
-
-//             bool isFollowed = obj["isFollowed"].toBool();
-//             isFollowing = isFollowed;
-
-//             resultLabel->setText(login);
-//             if (isMe) {
-//                 statusLabel->setText("it is you");
-//                 actionButton->setVisible(false);
-//             } else {
-//                 statusLabel->setText(isFollowed ? "You follow" : "Not followed");
-//                 actionButton->setText(isFollowed ? "Unfollow" : "Follow");
-//                 actionButton->setVisible(true);
-//             }
-//             resultWidget->setVisible(true);
-//         } else {
-//             resultWidget->setVisible(false);
-//             statusLabel->setText("User not found");
-//         }
-//     } else {
-//         QString errorMsg = extractErrorMessage(reply);
-//         showMessage(this, "Search failed: " + errorMsg, QMessageBox::Critical);
-//         clearResult();
-//     }
-//     reply->deleteLater();
-// }
-
 void FriendFinder::onSearchFinished(QNetworkReply *reply) {
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
@@ -167,79 +124,36 @@ void FriendFinder::onSearchFinished(QNetworkReply *reply) {
         if (doc.isObject()) {
             QJsonObject obj = doc.object();
             QString login = obj["login"].toString();
-            QString avatarBase64 = obj.contains("avatar") ? obj["avatar"].toString() : "";
-            bool isMe = obj.contains("isMe") ? obj["isMe"].toBool() : false;
-            bool isFollowed = obj.contains("isFollowed") ? obj["isFollowed"].toBool() : false;
-            QString userId = obj["id"].isVariant() ? obj["id"].toVariant().toString() : "";
-
-            qDeleteAll(resultWidget->findChildren<QWidget *>());
-
-            QHBoxLayout *layout = new QHBoxLayout(resultWidget);
-            layout->setContentsMargins(10, 8, 10, 8);
-            layout->setSpacing(15);
-
-            QLabel *avatarLabel = new QLabel();
-            avatarLabel->setFixedSize(48, 48);
-            QPixmap pixmap;
-            if (!avatarBase64.isEmpty())
-                pixmap.loadFromData(QByteArray::fromBase64(avatarBase64.toLatin1()));
-            if (pixmap.isNull())
-                pixmap.load(":/sources/default_ava.png");
-
-            if (!pixmap.isNull()) {
-                QPixmap scaled =
-                    pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                QPixmap rounded(48, 48);
-                rounded.fill(Qt::transparent);
-                QPainter painter(&rounded);
-                painter.setRenderHint(QPainter::Antialiasing);
-                painter.setBrush(QBrush(scaled));
-                painter.setPen(Qt::NoPen);
-                painter.drawRoundedRect(0, 0, 48, 48, 24, 24);
-                avatarLabel->setPixmap(rounded);
-            } else {
-                avatarLabel->setText("🖼️");
-                avatarLabel->setStyleSheet(
-                    "background-color: #e0e0e0; border-radius: 24px; color: black;");
-                avatarLabel->setAlignment(Qt::AlignCenter);
-            }
-
-            QLabel *nameLabel = new QLabel(login);
-            nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #c5c5c5;");
-
-            layout->addWidget(avatarLabel);
-            layout->addWidget(nameLabel);
-            layout->addStretch();
+            bool isMe = obj["isMe"].toBool();
 
             if (isMe) {
-                QLabel *youLabel = new QLabel("It's you ✨");
-                youLabel->setStyleSheet("color: #c5c5c5; font-size: 13px; font-style: italic;");
-                layout->addWidget(youLabel);
+                currentSearchId = "me";
             } else {
-                QPushButton *actionBtn = new QPushButton(isFollowed ? "Unfollow" : "Follow");
-                actionBtn->setFixedSize(90, 32);
-                actionBtn->setStyleSheet(
-                    "QPushButton {"
-                    "   background-color: rgba(255, 255, 255, 0.07);"
-                    "   border-radius: 8px;"
-                    "   color: #c5c5c5;"
-                    "   font-size: 13px;"
-                    "}"
-                    "QPushButton:hover { background-color: rgba(255, 255, 255, 0.15); }");
-                layout->addWidget(actionBtn);
-
-                connect(actionBtn, &QPushButton::clicked, this, [this, userId, isFollowed]() {});
+                currentSearchId = obj["id"].isString() ? obj["id"].toString()
+                                                       : QString::number(obj["id"].toInt());
             }
 
+            bool isFollowed = obj["isFollowed"].toBool();
+            isFollowing = isFollowed;
+
+            resultLabel->setText(login);
+            if (isMe) {
+                statusLabel->setText("it is you");
+                actionButton->setVisible(false);
+            } else {
+                statusLabel->setText(isFollowed ? "You follow" : "Not followed");
+                actionButton->setText(isFollowed ? "Unfollow" : "Follow");
+                actionButton->setVisible(true);
+            }
             resultWidget->setVisible(true);
         } else {
             resultWidget->setVisible(false);
+            statusLabel->setText("User not found");
         }
     } else {
-        // Обработка ошибок
-        resultWidget->setVisible(false);
         QString errorMsg = extractErrorMessage(reply);
         showMessage(this, "Search failed: " + errorMsg, QMessageBox::Critical);
+        clearResult();
     }
     reply->deleteLater();
 }
