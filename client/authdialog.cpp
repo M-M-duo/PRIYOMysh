@@ -132,6 +132,8 @@ void AuthDialog::setupUI() {
         layout->addWidget(privateCheckBox);
     }
 
+    layout->addSpacing(10);
+
     QDialogButtonBox *buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     layout->addWidget(buttonBox, 0, Qt::AlignCenter);
@@ -155,6 +157,13 @@ void AuthDialog::setupUI() {
 
     connect(buttonBox, &QDialogButtonBox::accepted, this, &AuthDialog::onButtonClicked);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
+void AuthDialog::enableButtons(bool enabled) {
+    QDialogButtonBox *buttonBox = findChild<QDialogButtonBox *>();
+    if (buttonBox) {
+        buttonBox->setEnabled(enabled);
+    }
 }
 
 bool AuthDialog::eventFilter(QObject *obj, QEvent *event) {
@@ -226,11 +235,12 @@ QString AuthDialog::cropAndToBase64(const QString &filePath) {
 }
 
 void AuthDialog::onButtonClicked() {
+    // Убрали отключение кнопок, чтобы они оставались кликабельными
     if (mode == "login") {
-        emit loginClicked(loginEdit->text(), passwordEdit->text());
+        emit loginClicked(getLogin(), getPassword());
     } else {
-        emit registerClicked(loginEdit->text(), passwordEdit->text(), emailEdit->text(),
-                             phoneEdit->text(), privateCheckBox->isChecked(), avatarBase64);
+        emit registerClicked(getLogin(), getPassword(), getEmail(), getPhone(), isPrivate(),
+                             getAvatarBase64());
     }
 }
 

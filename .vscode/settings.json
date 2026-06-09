@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "string_view": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "string": "cpp"
     }
 }

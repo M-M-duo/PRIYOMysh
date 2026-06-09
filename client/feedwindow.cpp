@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDialog>
 #include <QEvent>
+#include <QEventLoop>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -29,17 +30,97 @@
 
 const QString API_BASE_URL = "http://127.0.0.1:8080";
 
+static QPixmap getRoundedAvatar(const QString &base64, int size = 64) {
+    QPixmap pixmap;
+    if (base64.isEmpty()) {
+        pixmap.load(":/sources/default_ava.png");
+    } else {
+        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+    }
+
+    if (pixmap.isNull()) {
+        QPixmap empty(size, size);
+        empty.fill(Qt::lightGray);
+        return empty;
+    }
+
+    QPixmap scaled = pixmap.scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap rounded(size, size);
+    rounded.fill(Qt::transparent);
+
+    QPainter painter(&rounded);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setBrush(QBrush(scaled));
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(0, 0, size, size, size / 2, size / 2);
+
+    return rounded;
+}
+
+static void showCustomInfo(QWidget *parent, const QString &text) {
+    QDialog dialog(parent);
+    dialog.setWindowTitle("PRIYOMYSH");
+    dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *iconLabel = new QLabel();
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    iconLabel->setPixmap(scaled);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(iconLabel);
+
+    QLabel *textLabel = new QLabel(text);
+    textLabel->setStyleSheet("color: white; font-size: 16px;");
+    textLabel->setAlignment(Qt::AlignCenter);
+    textLabel->setWordWrap(true);
+    layout->addWidget(textLabel);
+
+    QPushButton *okBtn = new QPushButton("OK");
+    okBtn->setStyleSheet("QPushButton { background-color: #007bff; color: white; border-radius: "
+                         "8px; padding: 8px 20px; font-size: 14px; }"
+                         "QPushButton:hover { background-color: #0056b3; }");
+    layout->addWidget(okBtn, 0, Qt::AlignCenter);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
+}
+
 static void showCustomMessage(QWidget *parent, const QString &text, const QString &iconPath) {
-    QMessageBox msgBox(parent);
-    QPixmap original(iconPath);
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("PRIYOMYSH");
-    msgBox.setText(text);
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().height();
-    msgBox.move(170, (screenHeight - msgBox.height()) / 2);
-    msgBox.exec();
+    QDialog dialog(parent);
+    dialog.setWindowTitle("PRIYOMYSH");
+    dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *iconLabel = new QLabel();
+    QPixmap original(":/sources/warn_happy.png");
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    iconLabel->setPixmap(scaled);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(iconLabel);
+
+    QLabel *textLabel = new QLabel(text);
+    textLabel->setStyleSheet("color: white; font-size: 16px;");
+    textLabel->setAlignment(Qt::AlignCenter);
+    textLabel->setWordWrap(true);
+    layout->addWidget(textLabel);
+
+    QPushButton *okBtn = new QPushButton("OK");
+    okBtn->setStyleSheet("QPushButton { background-color: #007bff; color: white; border-radius: "
+                         "8px; padding: 8px 20px; font-size: 14px; }"
+                         "QPushButton:hover { background-color: #0056b3; }");
+    layout->addWidget(okBtn, 0, Qt::AlignCenter);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
 }
 
 static QString wrapText(const QString &text, int maxLineLength) {
@@ -78,6 +159,29 @@ static QString wrapText(const QString &text, int maxLineLength) {
     return result;
 }
 
+class UserListItem : public QWidget {
+public:
+    UserListItem(const QString &username, const QString &avatarBase64, QWidget *parent = nullptr)
+        : QWidget(parent) {
+
+        QHBoxLayout *layout = new QHBoxLayout(this);
+        layout->setContentsMargins(10, 8, 10, 8);
+        layout->setSpacing(15);
+
+        QLabel *avatarLabel = new QLabel(this);
+        avatarLabel->setFixedSize(48, 48);
+        avatarLabel->setPixmap(getRoundedAvatar(avatarBase64, 48));
+        avatarLabel->setStyleSheet("border: none;");
+
+        QLabel *nameLabel = new QLabel(username, this);
+        nameLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #c5c5c5;");
+
+        layout->addWidget(avatarLabel);
+        layout->addWidget(nameLabel);
+        layout->addStretch();
+    }
+};
+
 class PostWidget : public QWidget {
 public:
     PostWidget(const QJsonObject &post, FeedWindow *parent = nullptr)
@@ -99,26 +203,10 @@ public:
 
         QLabel *avatarLabel = new QLabel(this);
         avatarLabel->setFixedSize(32, 32);
-        avatarLabel->setStyleSheet("border: none; background-color: #cccccc; border-radius: 12px;");
         avatarLabel->setScaledContents(true);
-        if (post.contains("author_avatar") && !post["author_avatar"].toString().isEmpty()) {
-            QString base64 = post["author_avatar"].toString();
-            QPixmap pixmap;
-            pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
-            if (!pixmap.isNull()) {
-                QPixmap scaled =
-                    pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                QPixmap rounded(48, 48);
-                rounded.fill(Qt::transparent);
-                QPainter painter(&rounded);
-                painter.setRenderHint(QPainter::Antialiasing);
-                painter.setBrush(QBrush(scaled));
-                painter.setPen(Qt::NoPen);
-                painter.drawRoundedRect(0, 0, 48, 48, 32, 32);
-                avatarLabel->setPixmap(rounded);
-                avatarLabel->setStyleSheet("border: none;");
-            }
-        }
+        QString base64 = post["author_avatar"].toString();
+        avatarLabel->setPixmap(getRoundedAvatar(base64, 48));
+        avatarLabel->setStyleSheet("border: none;");
         authorLayout->addWidget(avatarLabel);
 
         authorLabel = new QLabel(post["author"].toString(), this);
@@ -132,10 +220,10 @@ public:
         if (post.contains("img") && post["img"].isArray()) {
             QJsonArray imagesArray = post["img"].toArray();
             for (const auto &img : imagesArray) {
-                QString base64 = img.toString();
-                if (!base64.isEmpty()) {
+                QString imgBase64 = img.toString();
+                if (!imgBase64.isEmpty()) {
                     QPixmap pixmap;
-                    pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
+                    pixmap.loadFromData(QByteArray::fromBase64(imgBase64.toLatin1()));
                     if (!pixmap.isNull()) {
                         cachedImages.append(
                             pixmap.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -261,7 +349,7 @@ public:
         QFrame *line = new QFrame(this);
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        line->setFixedWidth(440);
+        line->setFixedWidth(420);
         mainLayout->addWidget(line, 0, Qt::AlignCenter);
 
         if (hasImages) {
@@ -368,9 +456,9 @@ void FeedWindow::setupUI() {
     topRow->setSpacing(10);
     avatarLabel = new QLabel(this);
     avatarLabel->setFixedSize(60, 60);
-    avatarLabel->setStyleSheet("border: none; background-color: #e0e0e0;");
+    avatarLabel->setStyleSheet("border: none;");
+    avatarLabel->setPixmap(getRoundedAvatar("", 120));
     avatarLabel->setAlignment(Qt::AlignCenter);
-    avatarLabel->setText("🖼️");
     avatarLabel->setScaledContents(true);
     topRow->addWidget(avatarLabel);
     profileLoginLabel = new QLabel("", this);
@@ -659,26 +747,14 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
     followingButton->setText(QString("%1\nfollowing").arg(following));
     postsButton->setText(QString("%1\nposts").arg(posts));
 
-    if (profile.contains("image") && !profile["image"].toString().isEmpty()) {
-        QString base64 = profile["image"].toString();
-        QPixmap pixmap;
-        pixmap.loadFromData(QByteArray::fromBase64(base64.toLatin1()));
-        if (!pixmap.isNull()) {
-            QPixmap scaled = pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            QPixmap rounded(120, 120);
-            rounded.fill(Qt::transparent);
-            QPainter painter(&rounded);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.setBrush(QBrush(scaled));
-            painter.setPen(Qt::NoPen);
-            painter.drawRoundedRect(0, 0, 120, 120, 60, 60);
-            avatarLabel->setPixmap(rounded);
-            avatarLabel->setStyleSheet("border: none;");
-        }
-    }
+    QString base64 = profile["image"].toString();
+    avatarLabel->setPixmap(getRoundedAvatar(base64, 120));
+    avatarLabel->setStyleSheet("border: none;");
+
     bool isMe = profile.contains("isMe") ? profile["isMe"].toBool() : false;
     if (currentProfileId == "me" || isMe) {
         followProfileButton->setVisible(true);
+        followProfileButton->setFixedWidth(390);
         followProfileButton->setText("Edit profile");
         followProfileButton->setEnabled(true);
         followProfileButton->setStyleSheet(
@@ -690,6 +766,7 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
                 &FeedWindow::onEditProfileClicked);
     } else {
         followProfileButton->setVisible(true);
+        followProfileButton->setFixedWidth(420);
         bool isFollowing = profile["isFollowing"].toBool();
         followProfileButton->setText(isFollowing ? "Unfollow" : "Follow");
         followProfileButton->setEnabled(true);
@@ -710,19 +787,21 @@ void FeedWindow::updateProfileHeader(const QJsonObject &profile) {
 
 void FeedWindow::showNoPostsImage() {
     clearPosts();
+
+    QLabel *imageLabel = new QLabel(this);
     QPixmap noPostsPixmap(":/sources/no_posts.png");
+
     if (!noPostsPixmap.isNull()) {
-        QLabel *imageLabel = new QLabel(this);
         QPixmap scaled =
-            noPostsPixmap.scaled(360, 360, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            noPostsPixmap.scaled(400, 400, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         imageLabel->setPixmap(scaled);
-        imageLabel->setAlignment(Qt::AlignCenter);
-        postsLayout->addWidget(imageLabel);
     } else {
-        QLabel *infoLabel = new QLabel("No posts available", this);
-        infoLabel->setAlignment(Qt::AlignCenter);
-        postsLayout->addWidget(infoLabel);
+        imageLabel->setText("No posts available");
+        imageLabel->setStyleSheet("color: #6c757d; font-size: 16px;");
     }
+
+    imageLabel->setAlignment(Qt::AlignCenter);
+    postsLayout->addWidget(imageLabel);
 }
 
 void FeedWindow::clearPosts() {
@@ -872,13 +951,19 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isArray()) {
             QJsonArray posts = doc.array();
-            for (const auto &postVal : posts) {
-                QJsonObject post = postVal.toObject();
-                addPost(post);
-                lastPostId = post["id"].isString() ? post["id"].toString()
-                                                   : QString::number(post["id"].toInt());
-                lastPostDate = post["createdAt"].toString();
+
+            if (posts.isEmpty() && lastPostId.isEmpty()) {
+                showNoPostsImage();
+            } else {
+                for (const auto &postVal : posts) {
+                    QJsonObject post = postVal.toObject();
+                    addPost(post);
+                    lastPostId = post["id"].isString() ? post["id"].toString()
+                                                       : QString::number(post["id"].toInt());
+                    lastPostDate = post["createdAt"].toString();
+                }
             }
+
             if (posts.size() == limit) {
                 loadMoreButton->setVisible(true);
             } else {
@@ -983,60 +1068,91 @@ void FeedWindow::updatePostReaction(const QString &postId, int newLikes, int new
 }
 
 void FeedWindow::showUserList(const QString &title, const QString &endpoint) {
+    QDialog dialog(this);
+    dialog.setWindowTitle(title);
+    dialog.setFixedSize(360, 480);
+    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    dialog.setWindowFlags(dialog.windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(10, 10, 10, 10);
+
+    QListWidget *listWidget = new QListWidget(&dialog);
+    listWidget->setStyleSheet(
+        "QListWidget { border: none; background-color: transparent; outline: none; }"
+        "QListWidget::item { border-bottom: 1px solid rgba(200,200,200,0.5); border-radius: 10px; }"
+        "QListWidget::item:hover { background-color: rgba(200,200,200,0.2); }"
+        "QListWidget::item:selected { background-color: rgba(180,180,180,0.4); color: black; }");
+    layout->addWidget(listWidget);
+
+    QPushButton *closeButton = new QPushButton("Close", &dialog);
+    closeButton->setFixedSize(100, 40);
+    closeButton->setStyleSheet("QPushButton { background-color: rgba(200,200,200,0.6); border: "
+                               "none; border-radius: 10px; font-size: 16px; }"
+                               "QPushButton:hover { background-color: rgba(180,180,180,0.8); }");
+    layout->addWidget(closeButton, 0, Qt::AlignCenter);
+    connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+
     QUrl url(API_BASE_URL + endpoint);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
-    QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply, title]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QByteArray response = reply->readAll();
-            QJsonDocument doc = QJsonDocument::fromJson(response);
-            if (doc.isArray()) {
-                QJsonArray users = doc.array();
-                QDialog dialog(this);
-                dialog.setWindowTitle(title);
-                dialog.resize(300, 400);
-                QVBoxLayout *layout = new QVBoxLayout(&dialog);
-                QListWidget *listWidget = new QListWidget(&dialog);
-                if (users.isEmpty()) {
-                    listWidget->addItem("No users found");
-                } else {
-                    for (const auto &userVal : users) {
-                        if (userVal.isObject()) {
-                            QJsonObject user = userVal.toObject();
-                            QString login = user["login"].toString();
-                            QString id = user["id"].isString()
-                                             ? user["id"].toString()
-                                             : QString::number(user["id"].toInt());
-                            QListWidgetItem *item = new QListWidgetItem(login, listWidget);
-                            item->setData(Qt::UserRole, id);
+    QNetworkAccessManager *manager = new QNetworkAccessManager(&dialog);
+    QNetworkReply *reply = manager->get(request);
+
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray response = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        if (doc.isArray()) {
+            QJsonArray users = doc.array();
+            if (users.isEmpty()) {
+                QListWidgetItem *item = new QListWidgetItem("No users found", listWidget);
+                item->setTextAlignment(Qt::AlignCenter);
+            } else {
+                for (const auto &userVal : users) {
+                    if (userVal.isObject()) {
+                        QJsonObject user = userVal.toObject();
+                        QString username = user["login"].toString();
+                        QString avatarBase64 = user["avatar"].toString();
+                        if (avatarBase64.isEmpty()) {
+                            avatarBase64 = user["image"].toString();
                         }
+                        QString id = user["id"].isString() ? user["id"].toString()
+                                                           : QString::number(user["id"].toInt());
+
+                        QListWidgetItem *item = new QListWidgetItem(listWidget);
+                        item->setSizeHint(QSize(listWidget->width() - 20, 64));
+                        item->setData(Qt::UserRole, id);
+
+                        UserListItem *customWidget =
+                            new UserListItem(username, avatarBase64, listWidget);
+                        listWidget->setItemWidget(item, customWidget);
                     }
                 }
-                layout->addWidget(listWidget);
-                QPushButton *closeBtn = new QPushButton("Close", &dialog);
-                layout->addWidget(closeBtn);
-                connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
-                connect(listWidget, &QListWidget::itemClicked,
-                        [this, &dialog](QListWidgetItem *item) {
-                            QString id = item->data(Qt::UserRole).toString();
-                            if (!id.isEmpty()) {
-                                dialog.accept();
-                                loadProfile(id);
-                            }
-                        });
-                dialog.exec();
-            } else {
-                showCustomMessage(this, "Invalid response format", ":/sources/warning_01.png");
             }
         } else {
-            showCustomMessage(this, "Failed to load " + title + ": " + reply->errorString(),
-                              ":/sources/warning_01.png");
+            showCustomMessage(this, "Invalid response format", ":/sources/warning_01.png");
         }
-        reply->deleteLater();
+    } else {
+        showCustomMessage(this, "Failed to load " + title + ": " + reply->errorString(),
+                          ":/sources/warning_01.png");
+    }
+    reply->deleteLater();
+
+    connect(listWidget, &QListWidget::itemClicked, [this, &dialog](QListWidgetItem *item) {
+        QString id = item->data(Qt::UserRole).toString();
+        if (!id.isEmpty()) {
+            dialog.accept();
+            loadProfile(id);
+        }
     });
+
+    dialog.exec();
 }
 
 void FeedWindow::onFollowersClicked() {
@@ -1065,7 +1181,8 @@ void FeedWindow::onEditProfileClicked() {
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
 
-    QNetworkReply *reply = networkManager->get(request);
+    QNetworkReply *reply = this->networkManager->get(request);
+
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray response = reply->readAll();
@@ -1086,49 +1203,50 @@ void FeedWindow::onEditProfileClicked() {
                 connect(&dialog, &EditProfileDialog::passwordChanged, this,
                         &FeedWindow::logoutRequested);
 
-                connect(
-                    &dialog, &EditProfileDialog::profileUpdated,
-                    [this](const QString &login, const QString &email, const QString &phone,
-                           bool isPrivate, const QString &avatarBase64) {
-                        QUrl updateUrl(API_BASE_URL + "/api/me/profile");
-                        QNetworkRequest updateRequest(updateUrl);
-                        updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
-                                                "application/json");
-                        updateRequest.setRawHeader("Authorization", "Bearer " + authToken.toUtf8());
+                connect(&dialog, &EditProfileDialog::profileUpdated,
+                        [this](const QString &login, const QString &email, const QString &phone,
+                               bool isPrivate, const QString &avatarBase64) {
+                            QUrl updateUrl(API_BASE_URL + "/api/me/profile");
+                            QNetworkRequest updateRequest(updateUrl);
+                            updateRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                                                    "application/json");
+                            updateRequest.setRawHeader("Authorization",
+                                                       "Bearer " + authToken.toUtf8());
 
-                        QJsonObject updateJson;
-                        updateJson["login"] = login;
-                        if (!email.isEmpty())
-                            updateJson["email"] = email;
-                        if (!phone.isEmpty())
-                            updateJson["phone"] = phone;
-                        updateJson["isPublic"] = !isPrivate;
-                        if (!avatarBase64.isEmpty()) {
-                            updateJson["image"] = avatarBase64;
-                        }
-
-                        QByteArray updateData = QJsonDocument(updateJson).toJson();
-
-                        QNetworkReply *updateReply =
-                            networkManager->sendCustomRequest(updateRequest, "PATCH", updateData);
-                        connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
-                            if (updateReply->error() == QNetworkReply::NoError) {
-                                showCustomMessage(this, "Profile updated",
-                                                  ":/sources/warn_happy.png");
-                                loadMyProfile();
-                            } else {
-                                QByteArray response = updateReply->readAll();
-                                QString errorMsg = updateReply->errorString();
-                                QJsonDocument doc = QJsonDocument::fromJson(response);
-                                if (doc.isObject() && doc.object().contains("reason")) {
-                                    errorMsg = doc.object()["reason"].toString();
-                                }
-                                showCustomMessage(this, "Update failed: " + errorMsg,
-                                                  ":/sources/warning_01.png");
+                            QJsonObject updateJson;
+                            updateJson["login"] = login;
+                            if (!email.isEmpty())
+                                updateJson["email"] = email;
+                            if (!phone.isEmpty())
+                                updateJson["phone"] = phone;
+                            updateJson["isPublic"] = !isPrivate;
+                            if (!avatarBase64.isEmpty()) {
+                                updateJson["image"] = avatarBase64;
                             }
-                            updateReply->deleteLater();
+
+                            QByteArray updateData = QJsonDocument(updateJson).toJson();
+
+                            QNetworkReply *updateReply = this->networkManager->sendCustomRequest(
+                                updateRequest, "PATCH", updateData);
+
+                            connect(updateReply, &QNetworkReply::finished, [this, updateReply]() {
+                                if (updateReply->error() == QNetworkReply::NoError) {
+                                    showCustomMessage(this, "Profile updated",
+                                                      ":/sources/warn_happy.png");
+                                    loadMyProfile();
+                                } else {
+                                    QByteArray response = updateReply->readAll();
+                                    QString errorMsg = updateReply->errorString();
+                                    QJsonDocument doc = QJsonDocument::fromJson(response);
+                                    if (doc.isObject() && doc.object().contains("reason")) {
+                                        errorMsg = doc.object()["reason"].toString();
+                                    }
+                                    showCustomMessage(this, "Update failed: " + errorMsg,
+                                                      ":/sources/warning_01.png");
+                                }
+                                updateReply->deleteLater();
+                            });
                         });
-                    });
                 dialog.exec();
             }
         } else {

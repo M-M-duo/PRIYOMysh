@@ -18,42 +18,101 @@
 #include <QVBoxLayout>
 
 static void showCustomWarning(QWidget *parent, const QString &text) {
-    QMessageBox msgBox(parent);
+    QDialog dialog(parent);
+    dialog.setWindowTitle("PRIYOMYSH");
+    dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *iconLabel = new QLabel();
     QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("PRIYOMYSH");
-    msgBox.setText(text);
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().height();
-    msgBox.move(170, (screenHeight - msgBox.height()) / 2);
-    msgBox.exec();
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    iconLabel->setPixmap(scaled);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(iconLabel);
+
+    QLabel *textLabel = new QLabel(text);
+    textLabel->setStyleSheet("color: white; font-size: 16px;");
+    textLabel->setAlignment(Qt::AlignCenter);
+    textLabel->setWordWrap(true);
+    layout->addWidget(textLabel);
+
+    QPushButton *okBtn = new QPushButton("OK");
+    okBtn->setStyleSheet("QPushButton { background-color: #007bff; color: white; border-radius: "
+                         "8px; padding: 8px 20px; font-size: 14px; }"
+                         "QPushButton:hover { background-color: #0056b3; }");
+    layout->addWidget(okBtn, 0, Qt::AlignCenter);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
 }
 
 static void showCustomError(QWidget *parent, const QString &text) {
-    QMessageBox msgBox(parent);
-    QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("PRIYOMYSH");
-    msgBox.setText(text);
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().height();
-    msgBox.move(170, (screenHeight - msgBox.height()) / 2);
-    msgBox.exec();
-}
+    QDialog dialog(parent);
+    dialog.setWindowTitle("PRIYOMYSH");
+    dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
 
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *iconLabel = new QLabel();
+    QPixmap original(":/sources/warning_01.png");
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    iconLabel->setPixmap(scaled);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(iconLabel);
+
+    QLabel *textLabel = new QLabel(text);
+    textLabel->setStyleSheet("color: white; font-size: 16px;");
+    textLabel->setAlignment(Qt::AlignCenter);
+    textLabel->setWordWrap(true);
+    layout->addWidget(textLabel);
+
+    QPushButton *okBtn = new QPushButton("OK");
+    okBtn->setStyleSheet("QPushButton { background-color: #007bff; color: white; border-radius: "
+                         "8px; padding: 8px 20px; font-size: 14px; }"
+                         "QPushButton:hover { background-color: #0056b3; }");
+    layout->addWidget(okBtn, 0, Qt::AlignCenter);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
+}
 static void showCustomInfo(QWidget *parent, const QString &text) {
-    QMessageBox msgBox(parent);
+    QDialog dialog(parent);
+    dialog.setWindowTitle("PRIYOMYSH");
+    dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(30, 30, 30, 30);
+    layout->setSpacing(20);
+
+    QLabel *iconLabel = new QLabel();
     QPixmap original(":/sources/warn_happy.png");
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    msgBox.setIconPixmap(scaled);
-    msgBox.setWindowTitle("PRIYOMYSH");
-    msgBox.setText(text);
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenHeight = screen->availableGeometry().height();
-    msgBox.move(170, (screenHeight - msgBox.height()) / 2);
-    msgBox.exec();
+    QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    iconLabel->setPixmap(scaled);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(iconLabel);
+
+    QLabel *textLabel = new QLabel(text);
+    textLabel->setStyleSheet("color: white; font-size: 16px;");
+    textLabel->setAlignment(Qt::AlignCenter);
+    textLabel->setWordWrap(true);
+    layout->addWidget(textLabel);
+
+    QPushButton *okBtn = new QPushButton("OK");
+    okBtn->setStyleSheet("QPushButton { background-color: #007bff; color: white; border-radius: "
+                         "8px; padding: 8px 20px; font-size: 14px; }"
+                         "QPushButton:hover { background-color: #0056b3; }");
+    layout->addWidget(okBtn, 0, Qt::AlignCenter);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
 }
 
 MainWindow::MainWindow(QWidget *parent)

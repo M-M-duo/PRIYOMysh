@@ -10,6 +10,9 @@ class AuthDialog : public QDialog {
     Q_OBJECT
 public:
     explicit AuthDialog(const QString &mode, QWidget *parent = nullptr);
+
+    void enableButtons(bool enabled);
+
     QString getLogin() const;
     QString getPassword() const;
     QString getEmail() const;
@@ -44,4 +47,4 @@ private:
     QString cropAndToBase64(const QString &filePath);
 };
 
-#endif
+#endif // AUTHDIALOG_H
