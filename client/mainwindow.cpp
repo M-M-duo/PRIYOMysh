@@ -20,12 +20,16 @@
 static void showCustomWarning(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
     QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaled = original.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    scaled.setDevicePixelRatio(200.0 / 70.0);
     msgBox.setIconPixmap(scaled);
     msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
+    msgBox.setStyleSheet("QMessageBox { font-size: 110%; } QPushButton { font-size: 110%; "
+                         "min-width: 80px; align: center; }");
     QScreen *screen = QGuiApplication::primaryScreen();
     int screenHeight = screen->availableGeometry().height();
+    msgBox.adjustSize();
     msgBox.move(170, (screenHeight - msgBox.height()) / 2);
     msgBox.exec();
 }
@@ -33,16 +37,19 @@ static void showCustomWarning(QWidget *parent, const QString &text) {
 static void showCustomError(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
     QPixmap original(":/sources/warning_01.png");
-    QPixmap scaled = original.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaled = original.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    scaled.setDevicePixelRatio(200.0 / 70.0);
     msgBox.setIconPixmap(scaled);
     msgBox.setWindowTitle("PRIYOMYSH");
     msgBox.setText(text);
+    msgBox.setStyleSheet("QMessageBox { font-size: 110%; } QPushButton { font-size: 110%; "
+                         "min-width: 80px; align: center; }");
     QScreen *screen = QGuiApplication::primaryScreen();
     int screenHeight = screen->availableGeometry().height();
+    msgBox.adjustSize();
     msgBox.move(170, (screenHeight - msgBox.height()) / 2);
     msgBox.exec();
 }
-
 static void showCustomInfo(QWidget *parent, const QString &text) {
     QMessageBox msgBox(parent);
     QPixmap original(":/sources/warn_happy.png");
