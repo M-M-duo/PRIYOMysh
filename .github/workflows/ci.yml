@@ -86,7 +86,6 @@ jobs:
           libjsoncpp-dev \
           libssl-dev \
           libpq-dev \
-          libxcrypt-dev \
           uuid-dev \
           postgresql-client
 
