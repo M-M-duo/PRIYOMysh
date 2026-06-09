@@ -68,8 +68,6 @@ jobs:
           POSTGRES_PASSWORD: test_password
         ports:
           - 5432:5432
-        volumes:
-          - ${{ github.workspace }}/server/tests/init.sql:/docker-entrypoint-initdb.d/init.sql
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -89,7 +87,8 @@ jobs:
           libssl-dev \
           libpq-dev \
           libxcrypt-dev \
-          uuid-dev
+          uuid-dev \
+          postgresql-client
 
     - name: Cache Drogon Framework
       id: cache-drogon
@@ -121,6 +120,12 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Debug
         cmake --build . --parallel 2
+
+    - name: Initialize Database Schema
+      env:
+        PGPASSWORD: test_password
+      run: |
+        psql -h 127.0.0.1 -U test_user -d priyomysh_db -f server/tests/init.sql
 
     - name: Run C++ Helpers Tests
       env:
