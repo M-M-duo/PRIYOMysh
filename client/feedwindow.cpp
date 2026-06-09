@@ -920,7 +920,7 @@ void FeedWindow::onLoadPostsFinished(QNetworkReply *reply) {
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isArray()) {
             QJsonArray posts = doc.array();
-            
+
             if (posts.isEmpty() && lastPostId.isEmpty() && friendsFeed) {
                 showNoPostsImage();
             } else {
