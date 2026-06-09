@@ -89,6 +89,12 @@ jobs:
           uuid-dev \
           postgresql-client
 
+    - name: Install jwt-cpp Library
+      run: |
+        git clone https://github.com/Thalhammer/jwt-cpp.git
+        sudo cp -r jwt-cpp/include/jwt-cpp /usr/local/include/
+        rm -rf jwt-cpp
+        
     - name: Cache Drogon Framework
       id: cache-drogon
       uses: actions/cache@v4
