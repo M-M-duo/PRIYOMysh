@@ -61,19 +61,13 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
     QDialog dialog(parent);
     dialog.setWindowTitle("PRIYOMYSH");
     dialog.setStyleSheet("QDialog { background-color: #2b2b2b; }");
-    dialog.setFixedSize(360, 400);
-
-    QScreen *screen = QGuiApplication::primaryScreen();
-    int screenWidth = screen->availableGeometry().width();
-    int screenHeight = screen->availableGeometry().height();
-    dialog.move((screenWidth - 360) / 2, (screenHeight - 400) / 2);
 
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(30, 30, 30, 30);
     layout->setSpacing(20);
 
     QLabel *iconLabel = new QLabel();
-    QPixmap original(":/sources/warn_happy.png");
+    QPixmap original(":/sources/warning_01.png");
     QPixmap scaled = original.scaled(190, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     iconLabel->setPixmap(scaled);
     iconLabel->setAlignment(Qt::AlignCenter);
@@ -92,6 +86,7 @@ static void showCustomInfo(QWidget *parent, const QString &text) {
     layout->addWidget(okBtn, 0, Qt::AlignCenter);
 
     QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
     dialog.exec();
 }
 
